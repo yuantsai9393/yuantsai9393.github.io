@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>旅買記</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", sans-serif; }
+body { background: #f5f5f5; }
+
+.app {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  background: #f5f5f5;
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+}
+.page { position: absolute; inset: 0; background: #f5f5f5; transition: transform 0.28s cubic-bezier(0.4,0,0.2,1); overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; min-height: 100vh; }
+.page.off-right { transform: translateX(100%); }
+.page.off-left { transform: translateX(-30%); pointer-events: none; }
+
+.header { background: #CC2229; padding: 14px 16px 0; position: sticky; top: 0; z-index: 10; }
+.header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.app-title { color: #fff; font-size: 18px; font-weight: 500; }
+.rate-badge { background: rgba(255,255,255,0.18); color: #fff; font-size: 12px; padding: 4px 10px; border-radius: 20px; display: flex; align-items: center; gap: 5px; }
+.rate-dot { width: 6px; height: 6px; border-radius: 50%; background: #7FE5A0; }
+.tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 10px; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tab { color: rgba(255,255,255,0.65); font-size: 13px; padding: 4px 12px; border-radius: 20px; white-space: nowrap; border: 1px solid transparent; cursor: pointer; background: none; }
+.tab.active { background: rgba(255,255,255,0.22); color: #fff; border-color: rgba(255,255,255,0.3); }
+
+.list-scroll { padding: 12px 14px 90px; }
+
+.fab {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #CC2229;
+  color: #fff;
+  border: none;
+  border-radius: 28px;
+  padding: 14px 32px;
+  font-size: 15px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  z-index: 20;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.section-label { font-size: 11px; color: #888; letter-spacing: 0.08em; text-transform: uppercase; margin: 16px 0 8px; display: flex; align-items: center; justify-content: space-between; }
+.section-count { background: #e8e8e8; color: #888; font-size: 11px; padding: 2px 8px; border-radius: 10px; }
+.card { background: #fff; border: 0.5px solid #eee; border-radius: 14px; margin-bottom: 10px; overflow: hidden; display: flex; align-items: stretch; cursor: pointer; }
+.card-img { width: 80px; min-height: 80px; flex-shrink: 0; background: #f0f0f0; display: flex; align-items: center; justify-content: center; overflow: hidden; font-size: 28px; }
+.card-img img { width: 100%; height: 100%; object-fit: cover; }
+.card-body { flex: 1; padding: 10px 12px; display: flex; flex-direction: column; justify-content: space-between; min-width: 0; }
+.card-name { font-size: 14px; font-weight: 500; color: #222; line-height: 1.35; margin-bottom: 2px; }
+.card-sub { font-size: 12px; color: #888; margin-bottom: 6px; }
+.card-prices { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.price-jpy { font-size: 17px; font-weight: 500; color: #222; }
+.price-unit { font-size: 11px; color: #888; }
+.price-twd { font-size: 12px; color: #888; }
+.tax-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 500; }
+.tax-in { background: #FEF3C7; color: #92400E; }
+.tax-out { background: #E0F2FE; color: #075985; }
+.empty-state { text-align: center; padding: 60px 24px; color: #888; }
+.empty-icon { font-size: 48px; margin-bottom: 12px; opacity: 0.3; }
+.empty-text { font-size: 14px; line-height: 1.7; }
+
+.sub-header { background: #CC2229; padding: 14px 16px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 10; }
+.btn-back { background: none; border: none; color: #fff; font-size: 22px; cursor: pointer; padding: 0; display: flex; align-items: center; line-height: 1; }
+.sub-title { color: #fff; font-size: 17px; font-weight: 500; }
+.add-scroll { padding: 16px 16px 40px; }
+
+.photo-picker { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 4px; }
+.photo-btn { border: 1.5px dashed #ccc; border-radius: 14px; padding: 20px 12px; text-align: center; cursor: pointer; color: #888; font-size: 13px; background: #f0f0f0; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.photo-btn .icon { font-size: 28px; color: #CC2229; }
+.photo-preview-wrap { border-radius: 14px; overflow: hidden; margin-bottom: 4px; background: #f0f0f0; display: none; }
+.photo-preview-wrap img { width: 100%; max-height: 220px; object-fit: contain; display: block; }
+
+.photo-tip { font-size: 12px; color: #888; margin-top: 8px; padding: 8px 10px; background: #f0f0f0; border-radius: 8px; }
+.btn-retake { display: block; text-align: center; font-size: 13px; color: #CC2229; margin-top: 8px; cursor: pointer; padding: 6px; }
+
+.field-label { font-size: 12px; color: #888; margin: 16px 0 5px; }
+.field-input { width: 100%; padding: 10px 12px; background: #fff; border: 1px solid #ddd; border-radius: 10px; font-size: 15px; color: #222; font-family: inherit; }
+.field-input:focus { outline: none; border-color: #CC2229; }
+.twd-hint { font-size: 12px; color: #888; margin-top: 5px; padding: 7px 10px; background: #f0f0f0; border-radius: 6px; }
+.toggle-row { display: flex; gap: 8px; margin-top: 5px; }
+.toggle-btn { flex: 1; padding: 9px; border: 1px solid #ddd; border-radius: 10px; font-size: 14px; background: #fff; color: #888; cursor: pointer; font-family: inherit; }
+.toggle-btn.sel { border-color: #CC2229; color: #CC2229; background: #FFF5F5; }
+.cat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 6px; }
+.cat-btn { padding: 8px 2px; border: 1px solid #ddd; border-radius: 10px; font-size: 12px; background: #fff; color: #888; cursor: pointer; text-align: center; font-family: inherit; }
+.cat-btn.sel { border-color: #CC2229; color: #CC2229; background: #FFF5F5; }
+.btn-save { width: 100%; padding: 14px; background: #CC2229; color: #fff; border: none; border-radius: 14px; font-size: 15px; font-weight: 500; margin-top: 24px; cursor: pointer; font-family: inherit; }
+
+.detail-img-wrap { background: #f0f0f0; }
+.detail-img-wrap img { width: 100%; max-height: 240px; object-fit: contain; display: block; }
+.detail-placeholder { height: 140px; display: flex; align-items: center; justify-content: center; font-size: 56px; opacity: 0.3; }
+.detail-content { padding: 16px; }
+.detail-name { font-size: 20px; font-weight: 500; margin-bottom: 4px; color: #222; }
+.detail-cat { font-size: 13px; color: #888; margin-bottom: 14px; }
+.price-block { background: #f0f0f0; border-radius: 14px; padding: 16px; margin-bottom: 16px; }
+.big-jpy { font-size: 30px; font-weight: 500; color: #222; }
+.big-twd { font-size: 15px; color: #888; margin-top: 4px; }
+.info-row { display: flex; justify-content: space-between; font-size: 14px; padding: 9px 0; border-bottom: 0.5px solid #eee; }
+.info-row:last-child { border-bottom: none; }
+.info-label { color: #888; }
+.btn-del { width: 100%; padding: 13px; background: none; border: 1px solid #ddd; border-radius: 14px; font-size: 14px; color: #CC2229; cursor: pointer; margin-top: 16px; font-family: inherit; }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <div class="page" id="page-list">
+    <div class="header">
+      <div class="header-top">
+        <span class="app-title">旅買記</span>
+        <div class="rate-badge"><span class="rate-dot"></span><span id="rate-txt">載入中...</span></div>
+      </div>
+      <div class="tabs">
+        <button class="tab active" onclick="filterCat('全部',this)">全部</button>
+        <button class="tab" onclick="filterCat('藥妝',this)">藥妝</button>
+        <button class="tab" onclick="filterCat('食品',this)">食品</button>
+        <button class="tab" onclick="filterCat('電器',this)">電器</button>
+        <button class="tab" onclick="filterCat('服飾',this)">服飾</button>
+        <button class="tab" onclick="filterCat('文具',this)">文具</button>
+        <button class="tab" onclick="filterCat('伴手禮',this)">伴手禮</button>
+        <button class="tab" onclick="filterCat('其他',this)">其他</button>
+      </div>
+    </div>
+    <div class="list-scroll" id="list-items"></div>
+    <button class="fab" onclick="goAdd()">＋ 新增商品</button>
+  </div>
+
+  <div class="page off-right" id="page-add">
+    <div class="sub-header">
+      <button class="btn-back" onclick="goList()" aria-label="返回">←</button>
+      <span class="sub-title" id="add-title">新增商品</span>
+    </div>
+    <div class="add-scroll">
+      <div id="photo-preview-wrap" class="photo-preview-wrap"><img id="preview-img" alt=""></div>
+      <div class="photo-picker" id="photo-picker">
+        <div class="photo-btn" onclick="triggerCamera()"><span class="icon">📷</span><span>拍照存證</span></div>
+        <div class="photo-btn" onclick="triggerGallery()"><span class="icon">🖼️</span><span>從相簿選擇</span></div>
+      </div>
+      <input type="file" id="file-camera" accept="image/*" capture="environment" style="display:none" onchange="handlePhoto(event)">
+      <input type="file" id="file-gallery" accept="image/*" style="display:none" onchange="handlePhoto(event)">
+      <div id="photo-tip" class="photo-tip" style="display:none">📝 請手動填入下方的商品名稱與價格</div>
+      <div id="retake-btn" class="btn-retake" style="display:none" onclick="resetPhoto()">🔄 重新選擇照片</div>
+
+      <div class="field-label">商品名稱</div>
+      <input class="field-input" id="f-name" placeholder="例：肌研白潤保濕乳液" type="text">
+
+      <div class="field-label">日幣價格（¥）</div>
+      <input class="field-input" id="f-price" placeholder="例：1280" type="number" inputmode="numeric" oninput="updateTWD()">
+      <div class="twd-hint" id="twd-hint">輸入價格後顯示台幣換算</div>
+
+      <div class="field-label">稅別</div>
+      <div class="toggle-row">
+        <button class="toggle-btn sel" id="t-in" onclick="setTax('in')">含稅</button>
+        <button class="toggle-btn" id="t-out" onclick="setTax('out')">未稅</button>
+      </div>
+
+      <div class="field-label">分類</div>
+      <div class="cat-grid">
+        <button class="cat-btn sel" onclick="setCat('藥妝',this)">💊 藥妝</button>
+        <button class="cat-btn" onclick="setCat('食品',this)">🍜 食品</button>
+        <button class="cat-btn" onclick="setCat('電器',this)">📱 電器</button>
+        <button class="cat-btn" onclick="setCat('服飾',this)">👕 服飾</button>
+        <button class="cat-btn" onclick="setCat('文具',this)">✏️ 文具</button>
+        <button class="cat-btn" onclick="setCat('伴手禮',this)">🎁 伴手禮</button>
+        <button class="cat-btn" onclick="setCat('其他',this)">📦 其他</button>
+      </div>
+
+      <div class="field-label">備註（選填）</div>
+      <input class="field-input" id="f-note" placeholder="例：松本清二樓有看到">
+
+      <button class="btn-save" id="save-btn" onclick="saveItem()">儲存商品</button>
+    </div>
+  </div>
+
+  <div class="page off-right" id="page-detail">
+    <div class="sub-header">
+      <button class="btn-back" onclick="goList()" aria-label="返回">←</button>
+      <span class="sub-title">商品詳細</span>
+      <div style="width:32px"></div>
+    </div>
+    <div id="detail-inner"></div>
+  </div>
+
+</div>
+
+<script>
+const ITEMS_KEY = 'jp_items_v5';
+const RATE_KEY = 'jp_rate_v5';
+const catEmoji = {'藥妝':'💊','食品':'🍜','電器':'📱','服飾':'👕','文具':'✏️','伴手禮':'🎁','其他':'📦'};
+
+let rate = parseFloat(localStorage.getItem(RATE_KEY)) || 0.212;
+let items = [];
+let currentCat = '全部';
+let selTax = 'in';
+let selCat = '藥妝';
+let photoDataUrl = null;
+let editingId = null;
+
+try { items = JSON.parse(localStorage.getItem(ITEMS_KEY) || '[]'); } catch(e) {}
+
+function save() { try { localStorage.setItem(ITEMS_KEY, JSON.stringify(items)); } catch(e) {} }
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+async function fetchRate() {
+  try {
+    const r = await fetch('https://open.er-api.com/v6/latest/JPY');
+    const d = await r.json();
+    if (d.rates && d.rates.TWD) { rate = parseFloat(d.rates.TWD.toFixed(4)); localStorage.setItem(RATE_KEY, rate); }
+  } catch(e) {}
+  document.getElementById('rate-txt').textContent = '1 JPY = ' + rate + ' TWD';
+}
+
+function showPage(id) {
+  ['page-list','page-add','page-detail'].forEach(p => {
+    const el = document.getElementById(p);
+    if (p === id) { el.classList.remove('off-right','off-left'); }
+    else if (id !== 'page-list' && p === 'page-list') { el.classList.add('off-left'); el.classList.remove('off-right'); }
+    else { el.classList.add('off-right'); el.classList.remove('off-left'); }
+  });
+}
+
+function goList() { showPage('page-list'); renderList(); }
+
+function goAdd(item) {
+  editingId = item ? item.id : null;
+  document.getElementById('add-title').textContent = item ? '編輯商品' : '新增商品';
+  document.getElementById('save-btn').textContent = item ? '儲存修改' : '儲存商品';
+
+  document.getElementById('f-name').value = item ? item.name : '';
+  document.getElementById('f-price').value = item ? item.price : '';
+  document.getElementById('f-note').value = item ? (item.note || '') : '';
+  updateTWD();
+
+  photoDataUrl = item ? item.photo : null;
+  if (photoDataUrl) {
+    document.getElementById('preview-img').src = photoDataUrl;
+    document.getElementById('photo-preview-wrap').style.display = 'block';
+    document.getElementById('photo-picker').style.display = 'none';
+    document.getElementById('photo-tip').style.display = 'block';
+    document.getElementById('retake-btn').style.display = 'block';
+  } else {
+    document.getElementById('photo-tip').style.display = 'none';
+    document.getElementById('retake-btn').style.display = 'none';
+    document.getElementById('photo-preview-wrap').style.display = 'none';
+    document.getElementById('photo-picker').style.display = 'grid';
+  }
+  document.getElementById('file-camera').value = '';
+  document.getElementById('file-gallery').value = '';
+
+  selTax = item ? item.tax : 'in';
+  document.getElementById('t-in').classList.toggle('sel', selTax === 'in');
+  document.getElementById('t-out').classList.toggle('sel', selTax === 'out');
+
+  selCat = item ? item.cat : '藥妝';
+  document.querySelectorAll('.cat-btn').forEach(b => {
+    b.classList.toggle('sel', b.textContent.trim().endsWith(selCat));
+  });
+
+  showPage('page-add');
+}
+
+function triggerCamera() { document.getElementById('file-camera').click(); }
+function triggerGallery() { document.getElementById('file-gallery').click(); }
+
+function filterCat(cat, btn) {
+  currentCat = cat;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  renderList();
+}
+
+function setTax(t) {
+  selTax = t;
+  document.getElementById('t-in').classList.toggle('sel', t==='in');
+  document.getElementById('t-out').classList.toggle('sel', t==='out');
+}
+
+function setCat(cat, btn) {
+  selCat = cat;
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('sel'));
+  btn.classList.add('sel');
+}
+
+function updateTWD() {
+  const p = parseFloat(document.getElementById('f-price').value);
+  document.getElementById('twd-hint').textContent = (p > 0) ? '≈ NT$' + Math.round(p * rate).toLocaleString() + ' 台幣' : '輸入價格後顯示台幣換算';
+}
+
+function handlePhoto(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    photoDataUrl = ev.target.result;
+    const previewImg = document.getElementById('preview-img');
+    previewImg.src = photoDataUrl;
+    document.getElementById('photo-preview-wrap').style.display = 'block';
+    document.getElementById('photo-picker').style.display = 'none';
+    document.getElementById('photo-tip').style.display = 'block';
+    document.getElementById('retake-btn').style.display = 'block';
+    document.getElementById('f-name').focus();
+  };
+  reader.readAsDataURL(file);
+}
+
+function resetPhoto() {
+  photoDataUrl = null;
+  document.getElementById('photo-preview-wrap').style.display = 'none';
+  document.getElementById('photo-picker').style.display = 'grid';
+  document.getElementById('photo-tip').style.display = 'none';
+  document.getElementById('retake-btn').style.display = 'none';
+  document.getElementById('file-camera').value = '';
+  document.getElementById('file-gallery').value = '';
+}
+
+function saveItem() {
+  const name = document.getElementById('f-name').value.trim();
+  const price = parseFloat(document.getElementById('f-price').value);
+  if (!name) { alert('請輸入商品名稱'); return; }
+  if (!price || price <= 0) { alert('請輸入正確的日幣價格'); return; }
+
+  let photo = null;
+  if (photoDataUrl) {
+    try {
+      const canvas = document.createElement('canvas');
+      const img = document.getElementById('preview-img');
+      const MAX = 600;
+      let w = img.naturalWidth, h = img.naturalHeight;
+      if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      photo = canvas.toDataURL('image/jpeg', 0.6);
+    } catch(e) { photo = photoDataUrl; }
+  }
+
+  const note = document.getElementById('f-note').value.trim();
+
+  if (editingId) {
+    const idx = items.findIndex(i => i.id === editingId);
+    if (idx !== -1) {
+      items[idx] = { ...items[idx], name, price, tax: selTax, cat: selCat, note, photo };
+    }
+    editingId = null;
+    save();
+    openDetail(items[idx].id);
+  } else {
+    items.unshift({ id: Date.now(), name, price, tax: selTax, cat: selCat, note, photo, rate, time: new Date().toISOString() });
+    save();
+    goList();
+  }
+}
+
+function openDetail(id) {
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+  const twd = Math.round(item.price * (item.rate || rate));
+  const date = new Date(item.time).toLocaleString('zh-TW', {month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  const taxLabel = item.tax === 'in' ? '含稅' : '未稅';
+  const taxClass = item.tax === 'in' ? 'tax-in' : 'tax-out';
+  document.getElementById('detail-inner').innerHTML = `
+    <div class="detail-img-wrap">${item.photo ? `<img src="${item.photo}" alt="">` : `<div class="detail-placeholder">${catEmoji[item.cat]||'📦'}</div>`}</div>
+    <div class="detail-content">
+      <div class="detail-name">${escapeHtml(item.name)}</div>
+      <div class="detail-cat">${catEmoji[item.cat]||''} ${item.cat}</div>
+      <div class="price-block">
+        <div class="big-jpy">¥${item.price.toLocaleString()} <span class="tax-badge ${taxClass}" style="font-size:12px;vertical-align:middle">${taxLabel}</span></div>
+        <div class="big-twd">≈ NT$${twd.toLocaleString()} <span style="font-size:11px;opacity:0.6">（匯率 ${item.rate}）</span></div>
+      </div>
+      ${item.note ? `<div class="info-row"><span class="info-label">備註</span><span>${escapeHtml(item.note)}</span></div>` : ''}
+      <div class="info-row"><span class="info-label">記錄時間</span><span>${date}</span></div>
+      <div style="display:flex; gap:8px; margin-top:16px;">
+        <button class="btn-del" style="margin-top:0; flex:1; color:#222;" data-edit-id="${item.id}">✏️ 編輯</button>
+        <button class="btn-del" style="margin-top:0; flex:1;" data-delete-id="${item.id}">🗑️ 刪除</button>
+      </div>
+    </div>`;
+  showPage('page-detail');
+
+  const editBtn = document.querySelector('[data-edit-id]');
+  if (editBtn) editBtn.addEventListener('click', () => {
+    const target = items.find(i => i.id === Number(editBtn.dataset.editId));
+    if (target) goAdd(target);
+  });
+
+  const delBtn = document.querySelector('[data-delete-id]');
+  if (delBtn) delBtn.addEventListener('click', () => {
+    deleteItem(Number(delBtn.dataset.deleteId));
+  });
+}
+
+function deleteItem(id) {
+  const item = items.find(i => i.id === id);
+  const label = item ? `「${escapeHtml(item.name)}」` : '此商品';
+  if (!confirm(`確定要刪除 ${label} 嗎？刪除後無法復原。`)) return;
+  items = items.filter(i => i.id !== id);
+  save();
+  goList();
+}
+
+function renderList() {
+  const el = document.getElementById('list-items');
+  const filtered = currentCat === '全部' ? items : items.filter(i => i.cat === currentCat);
+  if (!filtered.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">🛍️</div><div class="empty-text">還沒有記錄<br>點下方按鈕新增第一個商品！</div></div>`;
+    return;
+  }
+  const groups = {};
+  filtered.forEach(i => { if (!groups[i.cat]) groups[i.cat]=[]; groups[i.cat].push(i); });
+  let html = '';
+  Object.entries(groups).forEach(([cat, group]) => {
+    html += `<div class="section-label">${catEmoji[cat]||'📦'} ${cat}<span class="section-count">${group.length} 件</span></div>`;
+    group.forEach(item => {
+      const twd = Math.round(item.price * (item.rate || rate));
+      html += `<div class="card" onclick="openDetail(${item.id})">
+        <div class="card-img">${item.photo ? `<img src="${item.photo}" alt="">` : catEmoji[item.cat]||'📦'}</div>
+        <div class="card-body">
+          <div class="card-name">${escapeHtml(item.name)}</div>
+          ${item.note ? `<div class="card-sub">${escapeHtml(item.note)}</div>` : ''}
+          <div class="card-prices">
+            <span class="price-jpy">¥${item.price.toLocaleString()}<span class="price-unit"> JPY</span></span>
+            <span class="tax-badge ${item.tax==='in'?'tax-in':'tax-out'}">${item.tax==='in'?'含稅':'未稅'}</span>
+            <span class="price-twd">≈ NT$${twd.toLocaleString()}</span>
+          </div>
+        </div>
+      </div>`;
+    });
+  });
+  el.innerHTML = html;
+}
+
+fetchRate();
+renderList();
+</script>
+</body>
+</html>
