@@ -78,6 +78,16 @@ body { background: #f5f5f5; }
 .price-twd { font-size: 12px; color: #888; }
 .card-date { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #aaa; margin-top: 5px; }
 .card-cat { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #888; margin-bottom: 6px; }
+.card-qty { font-size: 12px; color: #aaa; }
+.card-subtotal { font-size: 13px; font-weight: 600; color: var(--brand-dark); }
+
+.day-header { display: flex; align-items: flex-end; justify-content: space-between; margin: 24px 0 10px; padding-bottom: 10px; border-bottom: 2px solid var(--brand-soft); }
+.day-date { font-size: 22px; font-weight: 700; color: #222; line-height: 1.1; }
+.day-wd { font-size: 13px; color: #888; font-weight: 400; margin-left: 6px; }
+.day-stats { text-align: right; }
+.day-jpy { font-size: 16px; font-weight: 700; color: var(--brand-dark); }
+.day-twd { font-size: 11px; color: #aaa; margin-top: 2px; }
+.day-count { font-size: 11px; color: #aaa; margin-top: 2px; }
 .summary { background: #fff; border: 0.5px solid #eee; border-radius: 14px; padding: 14px 16px; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; }
 .summary-label { font-size: 12px; color: #888; margin-bottom: 3px; }
 .summary-jpy { font-size: 24px; font-weight: 600; color: #222; line-height: 1.1; }
@@ -108,6 +118,10 @@ body { background: #f5f5f5; }
 .field-input { width: 100%; padding: 10px 12px; background: #fff; border: 1px solid #ddd; border-radius: 10px; font-size: 15px; color: #222; font-family: inherit; }
 .field-input:focus { outline: none; border-color: var(--brand); }
 .twd-hint { font-size: 12px; color: #888; margin-top: 5px; padding: 7px 10px; background: #f0f0f0; border-radius: 6px; }
+.qty-stepper { display: flex; align-items: center; gap: 14px; margin-top: 5px; }
+.qty-btn { width: 40px; height: 40px; border: 1px solid #ddd; border-radius: 10px; background: #fff; color: var(--brand-dark); font-size: 20px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: inherit; }
+.qty-btn:active { background: var(--brand-soft); }
+.qty-value { width: 56px; text-align: center; font-size: 18px; font-weight: 600; color: #222; }
 .toggle-row { display: flex; gap: 8px; margin-top: 5px; }
 .toggle-btn { flex: 1; padding: 9px; border: 1px solid #ddd; border-radius: 10px; font-size: 14px; background: #fff; color: #888; cursor: pointer; font-family: inherit; }
 .toggle-btn.sel { border-color: var(--brand); color: var(--brand-dark); background: var(--brand-soft); }
@@ -179,6 +193,13 @@ body { background: #f5f5f5; }
       <div class="field-label">日幣價格（¥）</div>
       <input class="field-input" id="f-price" placeholder="例：1280" type="number" inputmode="numeric" oninput="updateTWD()">
       <div class="twd-hint" id="twd-hint">輸入價格後顯示台幣換算</div>
+
+      <div class="field-label">購買數量</div>
+      <div class="qty-stepper">
+        <button type="button" class="qty-btn" onclick="stepQty(-1)" aria-label="減少數量">−</button>
+        <input class="qty-value" id="f-qty" type="number" inputmode="numeric" min="1" value="1" oninput="updateTWD()">
+        <button type="button" class="qty-btn" onclick="stepQty(1)" aria-label="增加數量">＋</button>
+      </div>
 
       <div class="field-label">稅別</div>
       <div class="toggle-row">
@@ -286,6 +307,7 @@ function goAdd(item) {
 
   document.getElementById('f-name').value = item ? item.name : '';
   document.getElementById('f-price').value = item ? item.price : '';
+  document.getElementById('f-qty').value = item ? (item.qty || 1) : 1;
   document.getElementById('f-note').value = item ? (item.note || '') : '';
   updateTWD();
 
@@ -339,9 +361,23 @@ function setCat(cat, btn) {
   btn.classList.add('sel');
 }
 
+function stepQty(delta) {
+  const el = document.getElementById('f-qty');
+  const next = Math.max(1, (parseInt(el.value, 10) || 1) + delta);
+  el.value = next;
+  updateTWD();
+}
+
 function updateTWD() {
   const p = parseFloat(document.getElementById('f-price').value);
-  document.getElementById('twd-hint').textContent = (p > 0) ? '≈ NT$' + Math.round(p * rate).toLocaleString() + ' 台幣' : '輸入價格後顯示台幣換算';
+  const qty = Math.max(1, parseInt(document.getElementById('f-qty').value, 10) || 1);
+  if (p > 0) {
+    const subtotal = p * qty;
+    const suffix = qty > 1 ? ` （¥${p.toLocaleString()} × ${qty}）` : '';
+    document.getElementById('twd-hint').textContent = '≈ NT$' + Math.round(subtotal * rate).toLocaleString() + ' 台幣' + suffix;
+  } else {
+    document.getElementById('twd-hint').textContent = '輸入價格後顯示台幣換算';
+  }
 }
 
 function handlePhoto(e) {
@@ -374,6 +410,7 @@ function resetPhoto() {
 function saveItem() {
   const name = document.getElementById('f-name').value.trim();
   const price = parseFloat(document.getElementById('f-price').value);
+  const qty = Math.max(1, parseInt(document.getElementById('f-qty').value, 10) || 1);
   if (!name) { alert('請輸入商品名稱'); return; }
   if (!price || price <= 0) { alert('請輸入正確的日幣價格'); return; }
 
@@ -396,13 +433,13 @@ function saveItem() {
   if (editingId) {
     const idx = items.findIndex(i => i.id === editingId);
     if (idx !== -1) {
-      items[idx] = { ...items[idx], name, price, tax: selTax, cat: selCat, note, photo };
+      items[idx] = { ...items[idx], name, price, qty, tax: selTax, cat: selCat, note, photo };
     }
     editingId = null;
     save();
     openDetail(items[idx].id);
   } else {
-    items.unshift({ id: Date.now(), name, price, tax: selTax, cat: selCat, note, photo, rate, time: new Date().toISOString() });
+    items.unshift({ id: Date.now(), name, price, qty, tax: selTax, cat: selCat, note, photo, rate, time: new Date().toISOString() });
     save();
     goList();
   }
@@ -411,7 +448,9 @@ function saveItem() {
 function openDetail(id) {
   const item = items.find(i => i.id === id);
   if (!item) return;
-  const twd = Math.round(item.price * (item.rate || rate));
+  const qty = item.qty || 1;
+  const subtotal = item.price * qty;
+  const twd = Math.round(subtotal * (item.rate || rate));
   const date = new Date(item.time).toLocaleString('zh-TW', {month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
   const taxLabel = item.tax === 'in' ? '含稅' : '未稅';
   const taxClass = item.tax === 'in' ? 'tax-in' : 'tax-out';
@@ -421,9 +460,11 @@ function openDetail(id) {
       <div class="detail-name">${escapeHtml(item.name)}</div>
       <div class="detail-cat">${catSvg(item.cat)} ${item.cat}</div>
       <div class="price-block">
-        <div class="big-jpy">¥${item.price.toLocaleString()} <span class="tax-badge ${taxClass}" style="font-size:12px;vertical-align:middle">${taxLabel}</span></div>
+        <div class="big-jpy">¥${subtotal.toLocaleString()} <span class="tax-badge ${taxClass}" style="font-size:12px;vertical-align:middle">${taxLabel}</span></div>
         <div class="big-twd">≈ NT$${twd.toLocaleString()} <span style="font-size:11px;opacity:0.6">（匯率 ${item.rate}）</span></div>
       </div>
+      ${qty > 1 ? `<div class="info-row"><span class="info-label">單價</span><span>¥${item.price.toLocaleString()} × ${qty}</span></div>` : ''}
+      <div class="info-row"><span class="info-label">數量</span><span>${qty}</span></div>
       ${item.note ? `<div class="info-row"><span class="info-label">備註</span><span>${escapeHtml(item.note)}</span></div>` : ''}
       <div class="info-row"><span class="info-label">記錄時間</span><span>${date}</span></div>
       <div style="display:flex; gap:8px; margin-top:16px;">
@@ -458,12 +499,15 @@ function dayStart(iso) { const d = new Date(iso || Date.now()); d.setHours(0,0,0
 function dayLabel(ms) {
   const d = new Date(ms);
   const wd = ['日','一','二','三','四','五','六'][d.getDay()];
-  return `${d.getMonth()+1}/${d.getDate()} (${wd})`;
+  return `${d.getMonth()+1}月${d.getDate()}日<span class="day-wd">週${wd}</span>`;
 }
 function fmtTime(iso) {
   if (!iso) return '';
   return new Date(iso).toLocaleTimeString('zh-TW', {hour:'2-digit',minute:'2-digit'});
 }
+
+function subtotalOf(item) { return item.price * (item.qty || 1); }
+function twdOf(item) { return Math.round(subtotalOf(item) * (item.rate || rate)); }
 
 function renderList() {
   const el = document.getElementById('list-items');
@@ -473,9 +517,9 @@ function renderList() {
     return;
   }
 
-  // 合計花費（依目前分類篩選連動）
-  const totalJpy = filtered.reduce((s, i) => s + i.price, 0);
-  const totalTwd = filtered.reduce((s, i) => s + Math.round(i.price * (i.rate || rate)), 0);
+  // 合計花費（依目前分類篩選連動，含數量）
+  const totalJpy = filtered.reduce((s, i) => s + subtotalOf(i), 0);
+  const totalTwd = filtered.reduce((s, i) => s + twdOf(i), 0);
   let html = `<div class="summary">
     <div>
       <div class="summary-label">合計花費${currentCat === '全部' ? '' : '・' + currentCat}</div>
@@ -485,20 +529,27 @@ function renderList() {
     <div class="summary-count">${filtered.length} 件</div>
   </div>`;
 
-  // 以全部商品最早一天為「第 1 天」基準
-  const tripStart = items.reduce((m, i) => Math.min(m, dayStart(i.time)), Infinity);
-
-  // 依日期分組
+  // 依日期分組，最新一天在前
   const groups = {};
   filtered.forEach(i => { const k = dayStart(i.time); (groups[k] = groups[k] || []).push(i); });
-  const dayKeys = Object.keys(groups).map(Number).sort((a, b) => a - b);
+  const dayKeys = Object.keys(groups).map(Number).sort((a, b) => b - a);
 
   dayKeys.forEach(k => {
-    const dayNum = Math.round((k - tripStart) / 86400000) + 1;
-    const group = groups[k].sort((a, b) => new Date(a.time) - new Date(b.time));
-    html += `<div class="section-label"><span>${ICON.clock} 第 ${dayNum} 天・${dayLabel(k)}</span><span class="section-count">${group.length} 件</span></div>`;
+    const group = groups[k].sort((a, b) => new Date(b.time) - new Date(a.time));
+    const dayJpy = group.reduce((s, i) => s + subtotalOf(i), 0);
+    const dayTwd = group.reduce((s, i) => s + twdOf(i), 0);
+    html += `<div class="day-header">
+      <div><span class="day-date">${dayLabel(k)}</span></div>
+      <div class="day-stats">
+        <div class="day-jpy">¥${dayJpy.toLocaleString()}</div>
+        <div class="day-twd">≈ NT$${dayTwd.toLocaleString()}</div>
+        <div class="day-count">${group.length} 件</div>
+      </div>
+    </div>`;
     group.forEach(item => {
-      const twd = Math.round(item.price * (item.rate || rate));
+      const qty = item.qty || 1;
+      const subtotal = subtotalOf(item);
+      const twd = twdOf(item);
       html += `<div class="card" onclick="openDetail(${item.id})">
         <div class="card-img">${item.photo ? `<img src="${item.photo}" alt="">` : catSvg(item.cat)}</div>
         <div class="card-body">
@@ -506,6 +557,7 @@ function renderList() {
           <div class="card-cat">${catSvg(item.cat)} ${item.cat}${item.note ? ` ・ ${escapeHtml(item.note)}` : ''}</div>
           <div class="card-prices">
             <span class="price-jpy">¥${item.price.toLocaleString()}<span class="price-unit"> JPY</span></span>
+            ${qty > 1 ? `<span class="card-qty">× ${qty}</span><span class="card-subtotal">= ¥${subtotal.toLocaleString()}</span>` : ''}
             <span class="tax-badge ${item.tax==='in'?'tax-in':'tax-out'}">${item.tax==='in'?'含稅':'未稅'}</span>
             <span class="price-twd">≈ NT$${twd.toLocaleString()}</span>
           </div>
