@@ -103,7 +103,13 @@ body { background: #f5f5f5; }
 .empty-icon { font-size: 48px; margin-bottom: 12px; opacity: 0.3; }
 .empty-text { font-size: 14px; line-height: 1.7; }
 
-.sub-header { background: var(--brand); padding: 14px 16px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 10; }
+.sub-header { background: var(--brand); padding: 14px 16px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 10; flex-shrink: 0; }
+
+/* 新增/編輯頁：頂部固定、中間捲動、底部儲存鈕固定 */
+#page-add { display: flex; flex-direction: column; overflow: hidden; }
+#page-add .add-scroll { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
+.form-footer { flex-shrink: 0; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); background: #f5f5f5; border-top: 1px solid #ececec; }
+.form-footer .btn-save { margin-top: 0; }
 .btn-back { background: none; border: none; color: #fff; font-size: 22px; cursor: pointer; padding: 0; display: flex; align-items: center; line-height: 1; }
 .sub-title { color: #fff; font-size: 17px; font-weight: 500; }
 .add-scroll { padding: 16px 16px 40px; }
@@ -261,7 +267,8 @@ body { background: #f5f5f5; }
 
       <div class="field-label">備註（選填）</div>
       <input class="field-input" id="f-note" placeholder="例：松本清二樓有看到">
-
+    </div>
+    <div class="form-footer">
       <button class="btn-save" id="save-btn" onclick="saveItem()">儲存商品</button>
     </div>
   </div>
