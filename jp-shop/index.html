@@ -350,7 +350,8 @@ body { background: #f5f5f5; }
 
       <div class="field-label" style="margin-top:26px">資料備份</div>
       <div class="backup-note" id="backup-stat"></div>
-      <button class="btn-backup" onclick="exportBackup()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg> 匯出備份檔</button>
+      <button class="btn-backup" onclick="exportBackup()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg> 匯出備份檔（還原用）</button>
+      <button class="btn-backup ghost" onclick="exportCsv()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h2"/><path d="M8 17h2"/><path d="M14 13h2"/><path d="M14 17h2"/></svg> 匯出 CSV（試算表）</button>
       <button class="btn-backup ghost" onclick="triggerImport()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg> 匯入備份</button>
       <input type="file" id="file-import" accept="application/json,.json" class="vh" onchange="handleImport(event)">
     </div>
@@ -540,18 +541,36 @@ function pickTheme(key) { applyTheme(key); renderThemes(); }
 /* ---------- 設定：資料備份（匯出 / 匯入） ---------- */
 function renderBackupStat() {
   const el = document.getElementById('backup-stat');
-  if (el) el.innerHTML = `資料只存在這支手機的瀏覽器，換手機或清除快取就會不見。建議偶爾匯出備份（可存雲端或傳 Line 給自己）。<br><br>目前共 <b>${trips.length}</b> 趟旅程 ・ <b>${items.length}</b> 筆商品。`;
+  if (el) el.innerHTML = `資料只存在這支手機的瀏覽器，換手機或清除快取就會不見。建議偶爾匯出備份（可存雲端或傳 Line 給自己）。<br>・<b>備份檔</b>：用來日後在 App 裡「匯入」還原<br>・<b>CSV</b>：用 Excel／試算表打開，方便記帳對帳<br><br>目前共 <b>${trips.length}</b> 趟旅程 ・ <b>${items.length}</b> 筆商品。`;
+}
+function dateStamp() { const d = new Date(), p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}`; }
+function downloadBlob(filename, blob) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 200);
 }
 function exportBackup() {
   const data = { app: 'jp-shop', version: 1, exportedAt: new Date().toISOString(), rate, theme: curTheme, curTripId, trips, items };
-  const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const d = new Date(), pad = n => String(n).padStart(2, '0');
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `旅買記備份_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}.json`;
-  document.body.appendChild(a); a.click();
-  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 200);
+  downloadBlob(`旅買記備份_${dateStamp()}.json`, new Blob([JSON.stringify(data)], { type: 'application/json' }));
+}
+function csvCell(v) {
+  v = (v == null ? '' : String(v));
+  return /[",\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+}
+function exportCsv() {
+  if (!items.length) { alert('目前沒有任何商品可以匯出。'); return; }
+  const tripName = id => { const t = trips.find(x => x.id === id); return t ? t.name : ''; };
+  const header = ['日期', '旅程', '商品', '分類', '日幣單價', '數量', '日幣小計', '台幣小計', '稅別', '備註'];
+  const rows = items.slice().sort((a, b) => new Date(a.time) - new Date(b.time)).map(i => {
+    const qty = i.qty || 1, sub = i.price * qty, twd = Math.round(sub * (i.rate || rate));
+    const date = i.time ? new Date(i.time).toLocaleString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }) : '';
+    return [date, tripName(i.tripId), i.name, i.cat, i.price, qty, sub, twd, i.tax === 'in' ? '含稅' : '未稅', i.note || ''];
+  });
+  const csv = [header, ...rows].map(r => r.map(csvCell).join(',')).join('\r\n');
+  const BOM = String.fromCharCode(0xFEFF); // 讓 Excel 正確辨識 UTF-8 中文
+  downloadBlob(`旅買記_${dateStamp()}.csv`, new Blob([BOM + csv], { type: 'text/csv;charset=utf-8' }));
 }
 function triggerImport() { document.getElementById('file-import').click(); }
 function handleImport(e) {
