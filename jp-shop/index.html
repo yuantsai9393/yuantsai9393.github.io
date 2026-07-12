@@ -44,6 +44,20 @@ body { background: #f5f5f5; }
 
 .list-scroll { padding: 12px 14px 90px; }
 
+/* 搜尋 + 排序控制列 */
+.list-controls { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
+.search-box { flex: 1; display: flex; align-items: center; gap: 6px; background: #fff; border: 1px solid #e5e5e5; border-radius: 10px; padding: 8px 11px; min-width: 0; }
+.search-box .ic { color: #aaa; }
+.search-box input { flex: 1; border: none; outline: none; font-size: 14px; font-family: inherit; background: none; color: #222; min-width: 0; }
+.search-clear { background: none; border: none; color: #bbb; font-size: 18px; cursor: pointer; padding: 0 2px; line-height: 1; display: none; }
+.sort-sel { flex-shrink: 0; border: 1px solid #e5e5e5; border-radius: 10px; padding: 8px 26px 8px 11px; font-size: 13px; font-family: inherit; background: #fff; color: #555; cursor: pointer; -webkit-appearance: none; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 9px center; }
+
+/* 照片放大檢視 */
+.lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.92); display: none; align-items: center; justify-content: center; z-index: 100; padding: 16px; }
+.lightbox.show { display: flex; }
+.lightbox img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.lightbox-close { position: absolute; top: 14px; right: 16px; color: #fff; background: rgba(255,255,255,0.15); border: none; width: 40px; height: 40px; border-radius: 50%; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; }
+
 .fab {
   position: fixed;
   bottom: 20px;
@@ -230,7 +244,21 @@ body { background: #f5f5f5; }
         <button class="tab" onclick="filterCat('其他',this)">其他</button>
       </div>
     </div>
-    <div class="list-scroll" id="list-items"></div>
+    <div class="list-scroll">
+      <div class="list-controls" id="list-controls">
+        <div class="search-box">
+          <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input id="search-input" type="text" placeholder="搜尋名稱或備註" oninput="setSearch(this.value)" autocomplete="off">
+          <button class="search-clear" id="search-clear" onclick="clearSearch()" aria-label="清除">×</button>
+        </div>
+        <select class="sort-sel" id="sort-sel" onchange="setSort(this.value)">
+          <option value="date">依日期</option>
+          <option value="price-desc">價格高→低</option>
+          <option value="price-asc">價格低→高</option>
+        </select>
+      </div>
+      <div id="list-items"></div>
+    </div>
     <button class="fab" onclick="goAdd()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg> 新增商品</button>
   </div>
 
@@ -306,6 +334,11 @@ body { background: #f5f5f5; }
     <div class="add-scroll" id="trips-inner"></div>
   </div>
 
+  <div class="lightbox" id="lightbox" onclick="closeLightbox()">
+    <button class="lightbox-close" aria-label="關閉">×</button>
+    <img id="lightbox-img" src="" alt="">
+  </div>
+
   <div class="page off-right" id="page-settings">
     <div class="sub-header">
       <button class="btn-back" onclick="goList()" aria-label="返回"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
@@ -362,6 +395,8 @@ function imgFallback(el, cat) { const p = el.parentElement; if (p) p.innerHTML =
 let rate = parseFloat(localStorage.getItem(RATE_KEY)) || 0.212;
 let items = [];
 let currentCat = '全部';
+let searchTerm = '';
+let sortMode = 'date';
 let selTax = 'in';
 let selCat = '藥妝';
 let photoDataUrl = null;
@@ -463,7 +498,7 @@ function renderTrips() {
   html += `<button class="btn-newtrip" onclick="newTrip()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg> 開始新旅程</button>`;
   document.getElementById('trips-inner').innerHTML = html;
 }
-function switchTrip(id) { curTripId = id; saveTrips(); updateTripName(); currentCat = '全部'; goList(); }
+function switchTrip(id) { curTripId = id; saveTrips(); updateTripName(); currentCat = '全部'; clearSearch(); goList(); }
 function newTrip() {
   const name = prompt('新旅程的名稱？例如：2026 東京', '');
   if (name === null) return;
@@ -717,7 +752,7 @@ function openDetail(id) {
   const taxLabel = item.tax === 'in' ? '含稅' : '未稅';
   const taxClass = item.tax === 'in' ? 'tax-in' : 'tax-out';
   document.getElementById('detail-inner').innerHTML = `
-    <div class="detail-img-wrap">${item.photo ? `<img src="${item.photo}" alt="" onerror="this.outerHTML='<div class=\\'detail-placeholder\\'>'+catSvg('${item.cat}')+'</div>'">` : `<div class="detail-placeholder">${catSvg(item.cat)}</div>`}</div>
+    <div class="detail-img-wrap">${item.photo ? `<img src="${item.photo}" alt="" style="cursor:zoom-in" onerror="this.outerHTML='<div class=\\'detail-placeholder\\'>'+catSvg('${item.cat}')+'</div>'">` : `<div class="detail-placeholder">${catSvg(item.cat)}</div>`}</div>
     <div class="detail-content">
       <div class="detail-name">${escapeHtml(item.name)}</div>
       <div class="detail-cat">${catSvg(item.cat)} ${item.cat}</div>
@@ -735,6 +770,9 @@ function openDetail(id) {
       </div>
     </div>`;
   showPage('page-detail');
+
+  const detailImg = document.querySelector('#detail-inner .detail-img-wrap img');
+  if (detailImg && item.photo) detailImg.addEventListener('click', () => openLightbox(item.photo));
 
   const editBtn = document.querySelector('[data-edit-id]');
   if (editBtn) editBtn.addEventListener('click', () => {
@@ -771,70 +809,116 @@ function fmtTime(iso) {
 function subtotalOf(item) { return item.price * (item.qty || 1); }
 function twdOf(item) { return Math.round(subtotalOf(item) * (item.rate || rate)); }
 
+/* ---------- 搜尋 / 排序 / 照片放大 ---------- */
+function setSearch(v) {
+  searchTerm = v.trim();
+  document.getElementById('search-clear').style.display = searchTerm ? 'block' : 'none';
+  renderList();
+}
+function clearSearch() {
+  searchTerm = '';
+  const si = document.getElementById('search-input');
+  if (si) si.value = '';
+  document.getElementById('search-clear').style.display = 'none';
+  renderList();
+}
+function setSort(v) { sortMode = v; renderList(); }
+
+function openLightbox(src) {
+  document.getElementById('lightbox-img').src = src;
+  document.getElementById('lightbox').classList.add('show');
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('show');
+  document.getElementById('lightbox-img').src = '';
+}
+
+function cardHtml(item, showDate) {
+  const qty = item.qty || 1;
+  const subtotal = subtotalOf(item);
+  const twd = twdOf(item);
+  const unitTwd = Math.round(item.price * (item.rate || rate));
+  const multi = qty > 1;
+  const when = showDate ? fmtDate(item.time) : fmtTime(item.time);
+  return `<div class="card" onclick="openDetail(${item.id})">
+    <div class="card-img">${item.photo ? `<img src="${item.photo}" alt="" onerror="imgFallback(this,'${item.cat}')">` : catSvg(item.cat)}</div>
+    <div class="card-right">
+      <div class="card-main">
+        <div class="card-info">
+          <div class="card-name">${escapeHtml(item.name)}</div>
+          <div class="card-cat">${catSvg(item.cat)} ${item.cat}</div>
+          ${item.time ? `<div class="card-date">${ICON.clock} ${when}</div>` : ''}
+        </div>
+        <div class="card-price">
+          <div class="price-jpy">¥${(multi ? item.price : subtotal).toLocaleString()}</div>
+          <span class="tax-badge ${item.tax==='in'?'tax-in':'tax-out'}">${item.tax==='in'?'含稅':'未稅'}</span>
+          <div class="price-twd">≈ NT$${(multi ? unitTwd : twd).toLocaleString()}</div>
+          ${multi ? `<div class="card-unit">× ${qty}　共 ¥${subtotal.toLocaleString()}</div>` : ''}
+        </div>
+      </div>
+      ${item.note ? `<div class="card-note"><span>${escapeHtml(item.note)}</span></div>` : ''}
+    </div>
+  </div>`;
+}
+
 function renderList() {
   const el = document.getElementById('list-items');
   const tripItems = items.filter(i => i.tripId === curTripId);
-  const filtered = currentCat === '全部' ? tripItems : tripItems.filter(i => i.cat === currentCat);
+
+  // 這趟完全沒有商品時，隱藏搜尋/排序控制列
+  document.getElementById('list-controls').style.display = tripItems.length ? 'flex' : 'none';
+
+  let filtered = currentCat === '全部' ? tripItems : tripItems.filter(i => i.cat === currentCat);
+  if (searchTerm) {
+    const q = searchTerm.toLowerCase();
+    filtered = filtered.filter(i => (i.name || '').toLowerCase().includes(q) || (i.note || '').toLowerCase().includes(q));
+  }
+
   if (!filtered.length) {
-    el.innerHTML = `<div class="empty-state"><div class="empty-icon">${ICON.bag}</div><div class="empty-text">還沒有記錄<br>點下方按鈕新增第一個商品！</div></div>`;
+    el.innerHTML = searchTerm
+      ? `<div class="empty-state"><div class="empty-icon">${ICON.bag}</div><div class="empty-text">找不到符合「${escapeHtml(searchTerm)}」的商品</div></div>`
+      : `<div class="empty-state"><div class="empty-icon">${ICON.bag}</div><div class="empty-text">還沒有記錄<br>點下方按鈕新增第一個商品！</div></div>`;
     return;
   }
 
-  // 合計花費（依目前分類篩選連動，含數量）
+  // 合計花費（依目前分類/搜尋篩選連動，含數量）
   const totalJpy = filtered.reduce((s, i) => s + subtotalOf(i), 0);
   const totalTwd = filtered.reduce((s, i) => s + twdOf(i), 0);
   let html = `<div class="summary">
     <div>
-      <div class="summary-label">合計花費${currentCat === '全部' ? '' : '・' + currentCat}</div>
+      <div class="summary-label">合計花費${currentCat === '全部' ? '' : '・' + currentCat}${searchTerm ? '・搜尋' : ''}</div>
       <div class="summary-jpy">¥${totalJpy.toLocaleString()}</div>
       <div class="summary-twd">≈ NT$${totalTwd.toLocaleString()}</div>
     </div>
     <div class="summary-count">${filtered.length} 件</div>
   </div>`;
 
-  // 依日期分組，最新一天在前
-  const groups = {};
-  filtered.forEach(i => { const k = dayStart(i.time); (groups[k] = groups[k] || []).push(i); });
-  const dayKeys = Object.keys(groups).map(Number).sort((a, b) => b - a);
-
-  dayKeys.forEach(k => {
-    const group = groups[k].sort((a, b) => new Date(b.time) - new Date(a.time));
-    const dayJpy = group.reduce((s, i) => s + subtotalOf(i), 0);
-    const dayTwd = group.reduce((s, i) => s + twdOf(i), 0);
-    html += `<div class="day-header">
-      <div class="day-date">${dayLabel(k)}</div>
-      <div class="day-total">
-        <span class="day-total-amt">¥${dayJpy.toLocaleString()}<span class="day-total-cnt">${group.length} 件</span></span>
-        <span class="day-total-twd">≈ NT$${dayTwd.toLocaleString()}</span>
-      </div>
-    </div>`;
-    group.forEach(item => {
-      const qty = item.qty || 1;
-      const subtotal = subtotalOf(item);
-      const twd = twdOf(item);
-      const unitTwd = Math.round(item.price * (item.rate || rate));
-      const multi = qty > 1;
-      html += `<div class="card" onclick="openDetail(${item.id})">
-        <div class="card-img">${item.photo ? `<img src="${item.photo}" alt="" onerror="imgFallback(this,'${item.cat}')">` : catSvg(item.cat)}</div>
-        <div class="card-right">
-          <div class="card-main">
-            <div class="card-info">
-              <div class="card-name">${escapeHtml(item.name)}</div>
-              <div class="card-cat">${catSvg(item.cat)} ${item.cat}</div>
-              ${item.time ? `<div class="card-date">${ICON.clock} ${fmtTime(item.time)}</div>` : ''}
-            </div>
-            <div class="card-price">
-              <div class="price-jpy">¥${(multi ? item.price : subtotal).toLocaleString()}</div>
-              <span class="tax-badge ${item.tax==='in'?'tax-in':'tax-out'}">${item.tax==='in'?'含稅':'未稅'}</span>
-              <div class="price-twd">≈ NT$${(multi ? unitTwd : twd).toLocaleString()}</div>
-              ${multi ? `<div class="card-unit">× ${qty}　共 ¥${subtotal.toLocaleString()}</div>` : ''}
-            </div>
-          </div>
-          ${item.note ? `<div class="card-note"><span>${escapeHtml(item.note)}</span></div>` : ''}
+  if (sortMode === 'date') {
+    // 依日期分組，最新一天在前
+    const groups = {};
+    filtered.forEach(i => { const k = dayStart(i.time); (groups[k] = groups[k] || []).push(i); });
+    const dayKeys = Object.keys(groups).map(Number).sort((a, b) => b - a);
+    dayKeys.forEach(k => {
+      const group = groups[k].sort((a, b) => new Date(b.time) - new Date(a.time));
+      const dayJpy = group.reduce((s, i) => s + subtotalOf(i), 0);
+      const dayTwd = group.reduce((s, i) => s + twdOf(i), 0);
+      html += `<div class="day-header">
+        <div class="day-date">${dayLabel(k)}</div>
+        <div class="day-total">
+          <span class="day-total-amt">¥${dayJpy.toLocaleString()}<span class="day-total-cnt">${group.length} 件</span></span>
+          <span class="day-total-twd">≈ NT$${dayTwd.toLocaleString()}</span>
         </div>
       </div>`;
+      group.forEach(item => { html += cardHtml(item, false); });
     });
-  });
+  } else {
+    // 依價格排序：不分日、平鋪；卡片顯示完整日期
+    const arr = filtered.slice().sort((a, b) => sortMode === 'price-desc'
+      ? subtotalOf(b) - subtotalOf(a)
+      : subtotalOf(a) - subtotalOf(b));
+    html += `<div style="height:6px"></div>`;
+    arr.forEach(item => { html += cardHtml(item, true); });
+  }
   el.innerHTML = html;
 }
 
