@@ -1210,7 +1210,7 @@
     const list = LIVE().filter(w => cat==='all' || w.cat===cat);
     document.getElementById('empty').style.display = list.length ? 'none' : 'block';
     g.innerHTML = list.map(w => `
-      <article class="card${w.soon ? ' soon' : ''}" onclick="openDetail('${w.id}')">
+      <article class="card${w.soon ? ' soon' : ''}" onclick="openWork('${w.id}')">
         <div class="card-media">
           ${w.soon
             ? `<div class="soon-box" style="--ph:${CAT[w.cat].color}">${icon('image-plus')}<span>${T('card.soon')}</span></div>`
@@ -1223,7 +1223,7 @@
             <div class="card-title">${L(w,'title')}</div>
             <div class="card-cat">${catLabel(w.cat)}</div>
           </div>
-          <div class="arrow" onclick="event.stopPropagation();openDetail('${w.id}')">${icon('arrow-right')}</div>
+          <div class="arrow" onclick="event.stopPropagation();openWork('${w.id}')">${icon('arrow-right')}</div>
         </div>
       </article>`).join('');
   }
@@ -1406,7 +1406,7 @@
           ${T('d.liveBtn')} ${icon('external-link')}
         </a>
       </div>` : ''}
-      <div class="next-card" onclick="openDetail('${next.id}')">
+      <div class="next-card" onclick="openWork('${next.id}')">
         <div><div class="lbl">${T('d.next')}</div><div class="nm">${L(next,'title')}</div></div>
         <div class="arrow" style="opacity:1;transform:none;">${icon('arrow-right')}</div>
       </div>`;
@@ -1422,7 +1422,24 @@
       l.classList.toggle('active', l.dataset.view === (name==='detail' ? 'home' : name));
     });
   }
-  function go(name) { showView(name); closeMenu(); window.scrollTo(0,0); }
+  // ---------- 網址路由（hash-based，靜態空間可用）----------
+  // 導覽只改網址；實際換畫面統一由 route() 在 hashchange 時處理，
+  // 這樣分頁/作品都有可分享的網址，上一頁、重新整理也正常。
+  function go(name){ location.hash = (name === 'home') ? '#/' : '#/' + name; }
+  function openWork(id){ location.hash = '#/work/' + id; }
+
+  function route(){
+    closeMenu();
+    const seg = location.hash.replace(/^#\/?/, '').split('/');
+    if (seg[0] === 'work' && seg[1] && WORKS.some(w => w.id === seg[1] && !w.draft)) {
+      openDetail(seg[1]);              // openDetail 自己會 showView('detail') 並捲到頂
+    } else if (seg[0] === 'about' || seg[0] === 'contact') {
+      showView(seg[0]); window.scrollTo(0,0);
+    } else {
+      showView('home'); window.scrollTo(0,0);
+    }
+  }
+  window.addEventListener('hashchange', route);
 
   /* ---------- 漢堡選單 ---------- */
   function toggleMenu(){ document.getElementById('navlinks').classList.toggle('open'); }
@@ -1460,6 +1477,7 @@
   });
 
   applyLang();   // 依儲存的語言初始化（含 renderGallery）
+  route();       // 依網址 hash 顯示對應畫面（深連結／重新整理都能還原）
 </script>
 </body>
 </html>
