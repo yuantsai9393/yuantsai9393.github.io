@@ -305,6 +305,10 @@
   .compare .problem { background: color-mix(in srgb, var(--c-graphic) 12%, var(--bg)); border: 1px solid color-mix(in srgb, var(--c-graphic) 30%, var(--bg)); }
   .compare .solve { background: color-mix(in srgb, var(--c-personal) 12%, var(--bg)); border: 1px solid color-mix(in srgb, var(--c-personal) 30%, var(--bg)); }
   .compare h4 { font-size: 17px; margin-bottom: 8px; text-align: left; }
+  /* 解法拆成小標＋說明的清單，比一大段好掃 */
+  .compare .sol-list { margin: 0; padding: 0; list-style: none; text-align: left; }
+  .compare .sol-list li + li { margin-top: 12px; }
+  .compare .sol-list b { display: block; margin-bottom: 2px; }
 
   /* 已上線但尚未寫成案例文章的功能：用虛線框與標籤區隔，圖片本身維持清晰、不加遮罩 */
   .future-block { margin-top: 48px; padding: 24px; border: 1px dashed var(--line); border-radius: var(--radius); }
@@ -786,8 +790,9 @@
       client:'PRO360 達人網', clientEn:'PRO360', platform:'Web · App', platformEn:'Web · App', role:'UX 流程重構 · 介面設計 · 流程串接', roleEn:'UX Flow Restructuring · UI Design · Flow Mapping', tool:'Figma', toolEn:'Figma', year:'已上線', yearEn:'Launched 2026',
       lead:'重構多年疊加的登入流程，把「判斷帳號狀態」的工作從使用者搬到系統身上。',
       leadEn:'Restructured a login flow tangled by years of iteration, moving the burden of judgment from the user to the system.',
-      flowImg:'images/pro360-login-flow.png',
-      cardImg:'images/pro360-card.png' },   // 首頁卡片用 1:1 的登入介面組圖（內頁第②段仍放完整流程圖 flowImg）
+      heroImg:'images/pro360-login-hero.png',   // 主視覺：實際 UI 畫面串接的登入流程
+      flowImg:'images/pro360-login-flow.png',   // 第③段：邏輯流程圖（判斷節點）
+      cardImg:'images/pro360-card.png' },       // 首頁卡片：1:1 登入介面組圖
     { id:'shop',    cat:'build',    spec:'deep', title:'旅買記 · 日本購物消費追蹤 App', titleEn:'旅買記 · Japan Shopping Tracker', h:'h1x', ratio:'3/2',
       client:'個人專案', clientEn:'Personal project', platform:'Web App（行動優先）', platformEn:'Web App (Mobile-first)', role:'產品設計 · 開發', roleEn:'Product Design · Development', tool:'Claude Code + GitHub Pages', toolEn:'Claude Code + GitHub Pages', year:'2026',
       lead:'旅日購物時追蹤消費與預算的小工具，從發現真實需求、定義 MVP 到自己動手做並上線。',
@@ -1158,8 +1163,8 @@
     'd.gmap.probD':   { zh:'最大的挑戰是跨生態系的硬限制：使用者從 Google Map 進入平台後，無法返回 Google Map。',
                          en:'The core challenge was a hard cross-ecosystem constraint: once users enter the platform from Google Maps, there\'s no way back.' },
     'd.gmap.solT':    { zh:'解法', en:'Solutions' },
-    'd.gmap.solD':    { zh:'輸入 Email 若已是平台帳號，需登入驗證後才能使用，且登入後鎖定不可更改，避免帳號混用；使用者關閉預訂畫面時，停留在專家頁面而不是死路，讓他能重新提出需求或探索其他服務；送出需求後直接引導至預訂詳情，內含與專家的聊天室及時間修改、關閉需求等管理功能，把「送出後的失聯焦慮」在動線上直接解掉。',
-                         en:'If the entered email belongs to an existing account, login verification is required, and the email is locked afterward to prevent account mix-ups. Closing the booking view keeps users on the provider\'s page, never a dead end, so they can rebook or explore other services. After submitting, users are guided straight to the booking detail page, with built-in chat, time changes, and request management, resolving the "post-submit anxiety" directly in the flow.' },
+    'd.gmap.solD':    { zh:'<ul class="sol-list"><li><b>先確認身分</b>從 Google Map 進來的人可能已是會員。輸入的 Email 一旦對到既有帳號，就請他登入驗證、之後鎖定不可更改，避免同一人開出重複帳號、資料對不上。</li><li><b>不讓動線變死路</b>既然回不去 Google Map，關掉預訂畫面時就把他留在「專家頁面」，而不是丟到空白頁，他可以重新提需求或接著看其他服務。</li><li><b>消除送出後的失聯焦慮</b>送出需求後直接帶到「預訂詳情」，裡面就有與專家的聊天室、修改時間、關閉需求等管理功能，進度一目了然。</li></ul>',
+                         en:'<ul class="sol-list"><li><b>Confirm identity first</b>People arriving from Google Maps may already be members. If the entered email matches an existing account, we ask them to log in, then lock the email so one person can\'t end up with duplicate, mismatched accounts.</li><li><b>Never a dead end</b>Since there\'s no way back to Google Maps, closing the booking view keeps them on the provider\'s page instead of a blank screen, so they can rebook or browse other services.</li><li><b>Remove post-submit anxiety</b>After submitting a request, users land straight on the booking detail page, with built-in chat, time changes, and request management, so progress is always clear.</li></ul>' },
     'd.gmap.deep4t':  { zh:'介面：為最小的螢幕多做一步', en:'Interface: Going One Step Further for the Smallest Screens' },
     'd.gmap.deep4d':  { zh:'Wireframe 驗證互動與所有狀態後進入介面。幾個具體的體驗決策：小尺寸手機（320px）在時間選擇會發生文字截斷，因此為小螢幕另做一套介面版型，而不是硬塞同一套；用 icon 與間距重整預訂資料的呈現，提升可讀性；為避免頁面冗長，資料填寫欄位在完成時間選擇後才出現，把長流程切成可消化的段落；預訂管理除了送出後自動進入，也能從導航列隨時回訪。',
                          en:'After validating interactions and states in wireframes, several deliberate UX decisions shaped the interface: small devices (320px) suffered text truncation in time selection, so a separate layout variant was designed for small screens rather than forcing one size on all; icons and spacing restructured the booking summary for readability; form fields appear only after time selection, breaking a long flow into digestible steps; booking management is reachable both automatically after submission and anytime via the navigation bar.' },
