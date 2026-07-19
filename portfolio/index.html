@@ -1,0 +1,1465 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>蔡適遠 Yuan · UI/UX・產品設計師作品集</title>
+<style>
+  /* ============================================================
+     Design Tokens — 之後做正式版／進 Figma 都照這套
+     ============================================================ */
+  :root {
+    /* 色票 */
+    --bg:            #fbfaf8;   /* 暖白底 */
+    --surface:       #ffffff;
+    --ink:           #1c1a17;   /* 主文字 */
+    --ink-soft:      #6b665e;   /* 次要文字 */
+    --line:          #ece8e1;   /* 分隔線 */
+    --fill-control:  #efece6;   /* 灰底圓鈕 */
+
+    --primary:       #000080;   /* 主色：海軍藍 navy（結構、大面積） */
+    --on-primary:    #ffffff;
+    --accent:        #66FFE6;   /* 輔色：薄荷青（只當點睛、互動瞬間） */
+    --on-accent:     #000080;   /* 薄荷青上的文字＝深藍（亮底用深字） */
+    --accent-tint:   #e2fcf6;   /* 薄荷青極淡版，當 hover 底色 */
+
+    /* 三大分類點綴色 */
+    --c-uiux:        #2f6f8f;   /* UI/UX — 沉穩藍 */
+    --c-build:       #6b5bd2;   /* 自建產品 Build — 靛紫 */
+    --c-graphic:     #e2603f;   /* 平面設計 — 暖橘 */
+    --c-personal:    #5b8a5a;   /* 個人創作 — 草綠 */
+
+    /* 字級 */
+    --font: "Helvetica Neue", "PingFang TC", "Noto Sans TC", -apple-system, sans-serif;
+    --fs-hero: clamp(34px, 5vw, 58px);
+    --fs-h2:   clamp(24px, 3vw, 32px);
+    --fs-body: 16px;   /* 內文基準：需要閱讀的文字最小 16px */
+    --fs-sm:   14px;   /* 只用於輔助文字（標籤、資訊列、按鈕） */
+
+    /* 間距 / 圓角 / 陰影 */
+    --gap: 24px;
+    --radius: 16px;
+    --shadow: 0 18px 40px -18px rgba(30,26,23,.28);
+    --shadow-soft: 0 6px 20px -10px rgba(30,26,23,.18);
+
+    /* 動態 */
+    --ease: cubic-bezier(.22,.61,.36,1);
+    --t-in: .34s;
+    --t-out: .2s;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: var(--font);
+    color: var(--ink);
+    background: var(--bg);
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; text-decoration: none; }
+  img { max-width: 100%; display: block; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+
+  /* ============================================================
+     導覽列（固定上方）
+     ============================================================ */
+  header.nav {
+    position: sticky; top: 0; z-index: 50;
+    background: color-mix(in srgb, var(--bg) 85%, transparent);
+    backdrop-filter: saturate(180%) blur(12px);
+    border-bottom: 1px solid var(--line);
+  }
+  .nav-inner {
+    display: flex; align-items: center; justify-content: space-between;
+    height: 64px;
+  }
+  .logo { font-weight: 700; font-size: 18px; letter-spacing: .02em; cursor: pointer; }
+  .logo span { color: var(--primary); }
+  .nav-links { display: flex; align-items: center; gap: 28px; }
+  .nav-link {
+    position: relative; font-size: var(--fs-sm); color: var(--ink-soft);
+    padding: 4px 0; cursor: pointer; background: none; border: 0;
+    font-family: inherit; transition: color var(--t-out) var(--ease);
+  }
+  .nav-link::after {
+    content: ""; position: absolute; left: 0; bottom: -2px; height: 2px; width: 100%;
+    background: var(--ink); transform: scaleX(0); transform-origin: left;
+    transition: transform var(--t-in) var(--ease);
+  }
+  .nav-link:hover { color: var(--ink); }
+  .nav-link:hover::after { transform: scaleX(1); }
+  .nav-link.active { color: var(--ink); font-weight: 600; }
+  .nav-link.active::after { transform: scaleX(1); background: var(--primary); }
+
+  .btn {
+    font-family: inherit; cursor: pointer; border: 0; border-radius: 999px;
+    font-size: var(--fs-sm); font-weight: 600; padding: 9px 18px;
+    transition: transform var(--t-out) var(--ease), background var(--t-out) var(--ease), color var(--t-out) var(--ease);
+  }
+  /* 主按鈕：反白填色 hover */
+  .btn-primary { background: transparent; color: var(--primary); border: 1.5px solid var(--primary); }
+  .btn-primary:hover { background: var(--primary); color: var(--on-primary); }
+  .btn-primary:active { transform: scale(.97); }
+  .btn-ghost { background: var(--fill-control); color: var(--ink); }
+  .btn-ghost:hover { background: var(--ink); color: var(--bg); }
+  .btn-ghost:active { transform: scale(.97); }
+
+  .nav-right { display: flex; align-items: center; gap: 14px; }
+  /* 中/EN 語言切換鈕 */
+  .lang-toggle {
+    font-family: inherit; cursor: pointer; background: none; border: 1px solid var(--line);
+    color: var(--ink-soft); border-radius: 999px; padding: 6px 12px; font-size: var(--fs-sm); font-weight: 600;
+    transition: border-color var(--t-out) var(--ease), color var(--t-out) var(--ease), background var(--t-out) var(--ease);
+  }
+  .lang-toggle:hover { border-color: var(--accent); color: var(--on-accent); background: var(--accent-tint); }
+
+  .hamburger { display: none; background: none; border: 0; cursor: pointer; padding: 8px; }
+  .hamburger span { display: block; width: 22px; height: 2px; background: var(--ink); margin: 5px 0; transition: transform var(--t-out) var(--ease), opacity var(--t-out); }
+
+  /* 線性 icon（Lucide，用 currentColor 統一上色） */
+  .ico { width: 1em; height: 1em; display: inline-block; vertical-align: -0.14em; flex: 0 0 auto;
+    fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .meta .ico { color: var(--primary); }
+
+  /* ============================================================
+     View 切換
+     ============================================================ */
+  .view { display: none; animation: fade .4s var(--ease); }
+  .view.active { display: block; }
+  @keyframes fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+  section { padding: 64px 0; }
+
+  /* ---------- Hero ---------- */
+  .hero { padding-top: 72px; padding-bottom: 32px; }
+  .hero-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 48px; align-items: center; }
+  .hero h1 { font-size: var(--fs-hero); line-height: 1.25; letter-spacing: -.01em; }
+  /* 螢光筆點睛：薄荷青只墊在名字下緣 */
+  .hero h1 .hl {
+    background: linear-gradient(transparent 62%, var(--accent) 62%);
+    padding: 0 .08em; border-radius: 2px;
+  }
+  .hero .wave { display: inline-block; }
+  .hero .sub { margin-top: 18px; color: var(--ink-soft); font-size: 16px; }
+  .hero .cta { margin-top: 28px; display: flex; gap: 14px; flex-wrap: wrap; }
+  .hero-photo {
+    aspect-ratio: 4/5; border-radius: var(--radius); background:
+      linear-gradient(135deg, color-mix(in srgb, var(--primary) 22%, var(--bg)), color-mix(in srgb, var(--c-uiux) 20%, var(--bg)));
+    display: flex; align-items: center; justify-content: center; color: var(--ink-soft); font-size: var(--fs-sm);
+    box-shadow: var(--shadow-soft);
+  }
+  .trust { margin-top: 40px; color: var(--ink-soft); font-size: var(--fs-sm); }
+  .trust b { color: var(--ink); font-weight: 600; }
+
+  /* ---------- 分類篩選膠囊（吸附在導覽列下方，隨時可切換） ---------- */
+  #works { scroll-margin-top: 64px; }   /* 點 CTA 捲來時預留導覽列高度，膠囊不被蓋住 */
+  .filters {
+    position: sticky; top: 64px; z-index: 30;
+    display: flex; gap: 10px; flex-wrap: wrap; margin: 0 0 24px; padding: 12px 0;
+    background: color-mix(in srgb, var(--bg) 90%, transparent);
+    backdrop-filter: saturate(180%) blur(10px);
+  }
+  .pill {
+    font-family: inherit; cursor: pointer; border: 1px solid var(--line);
+    background: var(--surface); color: var(--ink-soft); border-radius: 999px;
+    padding: 7px 16px; font-size: var(--fs-sm);
+    transition: background var(--t-out) var(--ease), color var(--t-out) var(--ease), border-color var(--t-out) var(--ease);
+  }
+  .pill:hover { color: var(--on-accent); background: var(--accent-tint); border-color: var(--accent); }
+  .pill.active { background: var(--primary); color: var(--on-primary); border-color: var(--primary); }
+
+  /* ---------- 作品畫廊（正方形等比網格） ---------- */
+  .gallery { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--gap); }
+  .card {
+    cursor: pointer; position: relative;
+    transition: opacity var(--t-in) var(--ease), transform var(--t-in) var(--ease);
+  }
+  /* 聚焦列：hover 容器時其他變淡 */
+  .gallery:hover .card { opacity: .4; }
+  .gallery:hover .card:hover { opacity: 1; transform: translateY(-6px); }
+
+  .card-media {
+    border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow-soft);
+    transition: box-shadow var(--t-in) var(--ease);
+  }
+  .card:hover .card-media { box-shadow: var(--shadow); }
+  .card-media .ph {
+    width: 100%; display: block; transition: transform var(--t-in) var(--ease);
+  }
+  .card:hover .card-media .ph { transform: scale(1.08); }
+  /* 首頁作品卡：一律正方形（覆蓋 ratio） */
+  .card .card-media .ph, .card .card-media img, .card .card-media video { aspect-ratio: 1 / 1 !important; object-fit: cover; width: 100%; display: block; }
+
+  /* 整理中的作品：還沒有真圖，卡片先留位並標示清楚，但內頁照常可以點進去看 */
+  .card.soon .card-media { box-shadow: none; }
+  .soon-box {
+    aspect-ratio: 1 / 1; border-radius: var(--radius);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+    background: color-mix(in srgb, var(--ph) 8%, var(--bg));
+    border: 1.5px dashed color-mix(in srgb, var(--ph) 32%, var(--bg));
+    color: color-mix(in srgb, var(--ph) 75%, var(--ink));
+  }
+  .soon-box .ico { width: 22px; height: 22px; opacity: .8; }
+  .soon-box span { font-size: var(--fs-sm); letter-spacing: .04em; }
+
+  /* 高度級距（圖牆 masonry 用） */
+  .ph { background: var(--ph, #ddd); color: rgba(255,255,255,.85); display: flex; align-items: center; justify-content: center; font-size: var(--fs-sm); letter-spacing: .04em; }
+  .ph.h1x { aspect-ratio: 4/3; }
+  .ph.h2x { aspect-ratio: 3/4; }
+  .ph.h3x { aspect-ratio: 1/1; }
+
+  .card-head { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; gap: 8px; }
+  .card-title { font-weight: 600; font-size: 16px; }
+  .card-cat { font-size: var(--fs-sm); color: var(--ink-soft); }
+  /* 標題右邊滑出灰底圓箭頭，兩段式回饋 */
+  .arrow {
+    flex: 0 0 auto; width: 28px; height: 28px; border-radius: 999px;
+    background: var(--fill-control); color: var(--ink);
+    display: flex; align-items: center; justify-content: center; font-size: 14px;
+    opacity: 0; transform: translateX(8px);
+    transition: opacity var(--t-in) var(--ease), transform var(--t-in) var(--ease), background var(--t-out) var(--ease), color var(--t-out) var(--ease);
+  }
+  .card:hover .arrow { opacity: 1; transform: none; }
+  .arrow:hover { background: var(--accent); color: var(--on-accent); }
+
+  .empty { color: var(--ink-soft); padding: 48px 0; text-align: center; }
+
+  /* ---------- 首頁下半部區塊 ---------- */
+  .home-sec { padding-block: 56px; border-top: 1px solid var(--line); margin-top: 48px; }
+  .home-sec:first-of-type { margin-top: 56px; }
+  .home-sec > h2 { font-size: var(--fs-h2); margin-bottom: 6px; }
+  .sec-sub { color: var(--ink-soft); margin-bottom: 28px; }
+
+  /* ③ Services */
+  .skills { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .skill {
+    padding: 22px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface);
+    transition: transform var(--t-in) var(--ease), box-shadow var(--t-in) var(--ease), border-color var(--t-in) var(--ease);
+  }
+  .skill:hover { transform: translateY(-6px); box-shadow: var(--shadow); border-color: var(--accent); }
+  .skill .ic { font-size: 28px; line-height: 1; color: var(--primary); }
+  .skill .ic .ico { width: 1.7rem; height: 1.7rem; vertical-align: middle; }
+  .skill h3 { font-size: 18px; margin: 12px 0 6px; }
+  .skill p { color: var(--ink-soft); font-size: 16px; }
+
+  /* ④ About teaser */
+  .about-teaser { display: grid; grid-template-columns: 200px 1fr; gap: 36px; align-items: center; }
+  .about-teaser h2 { font-size: var(--fs-h2); margin-bottom: 10px; }
+  .about-teaser p { color: var(--ink-soft); max-width: 56ch; margin-bottom: 18px; }
+
+  /* ⑤ Closing CTA */
+  .home-cta { padding-block: 72px; border-top: 1px solid var(--line); margin-top: 48px; text-align: center; }
+  .home-cta h2 { font-size: var(--fs-h2); margin-bottom: 8px; }
+  .home-cta p { color: var(--ink-soft); margin-bottom: 24px; }
+  .cta-row { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+
+  /* ============================================================
+     作品內頁
+     ============================================================ */
+  /* 吸附在導覽列下方的返回列：滑到哪都能回作品列表 */
+  .detail-bar {
+    position: sticky; top: 64px; z-index: 40;
+    display: flex; align-items: center; gap: 14px;
+    margin: 0 -24px 20px; padding: 12px 24px;
+    background: color-mix(in srgb, var(--bg) 85%, transparent);
+    backdrop-filter: saturate(180%) blur(12px);
+    border-bottom: 1px solid var(--line);
+  }
+  .back { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-soft); font-size: var(--fs-sm); cursor: pointer; background: none; border: 0; font-family: inherit; }
+  .back:hover { color: var(--ink); }
+  .detail-tag { display: inline-block; font-size: var(--fs-sm); font-weight: 600; padding: 4px 12px; border-radius: 999px; color: #fff; }
+  /* 內頁寬度：圖牆型與說故事型都先統一抓 960px */
+  .detail { max-width: 960px; }
+  .detail.reading { max-width: 960px; }
+  .detail h1 { font-size: var(--fs-h2); margin: 4px 0 8px; }
+  .detail .lead { color: var(--ink-soft); font-size: 18px; line-height: 1.75; text-align: justify; }
+  .meta { display: flex; flex-wrap: wrap; gap: 18px; margin: 22px 0 28px; padding: 16px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); font-size: var(--fs-sm); color: var(--ink-soft); }
+  .meta b { color: var(--ink); font-weight: 600; }
+  .hero-shot { border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow-soft); margin-bottom: 40px; }
+  .hero-shot img { width: 100%; display: block; }
+  /* 主視覺是單支手機截圖時：置中放在淡色底上，不要拉滿閱讀欄寬 */
+  .hero-shot.phone { background: var(--fill-control); box-shadow: none; display: flex; justify-content: center; padding: 44px 20px; }
+  .hero-shot.phone img { width: auto; max-width: 300px; border-radius: 20px; box-shadow: var(--shadow); }
+  .step { display: grid; grid-template-columns: 68px 1fr; gap: 8px; margin-bottom: 40px; align-items: start; }
+  .step .no { font-size: 64px; font-weight: 400; line-height: .9; color: var(--primary); }
+  .step h3 { font-size: 22px; line-height: 1.35; margin-bottom: 10px; }
+  .step p { color: var(--ink-soft); font-size: 17px; line-height: 1.8; text-align: justify; text-justify: inter-character; }
+  .shot { margin-top: 16px; }
+  .shot + .shot { margin-top: 36px; }   /* 連續多張圖時加大間距，圖說才明確對應到自己的圖 */
+  .shot .shot-media { border-radius: 12px; overflow: hidden; box-shadow: var(--shadow-soft); }
+  .shot img, .shot .ph { width: 100%; display: block; }
+  .shot-cap { margin-top: 10px; font-size: var(--fs-sm); color: var(--ink-soft); text-align: left; }
+  /* 手機截圖並排：一列 2~3 張，各自帶圖說 */
+  .shot-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 260px)); gap: 28px; margin-top: 16px; align-items: start; }
+  .shot-row .shot, .shot-row .shot + .shot { margin-top: 0; }
+  /* 主題色票列：六張只比配色差異，用標頭裁切版並排，名稱在圖下 */
+  .theme-strip { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-top: 16px; }
+  .theme-strip figure { margin: 0; }
+  .theme-strip img { width: 100%; display: block; border-radius: 8px; box-shadow: var(--shadow-soft); }
+  .theme-strip figcaption { margin-top: 8px; font-size: 13px; color: var(--ink-soft); text-align: center; }
+  .strip-cap { margin-top: 14px; font-size: var(--fs-sm); color: var(--ink-soft); }
+  /* 問題/解決 左右對照 */
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+  .compare .box { border-radius: 12px; padding: 18px 20px; font-size: 16px; line-height: 1.75; text-align: justify; }
+  .compare .problem { background: color-mix(in srgb, var(--c-graphic) 12%, var(--bg)); border: 1px solid color-mix(in srgb, var(--c-graphic) 30%, var(--bg)); }
+  .compare .solve { background: color-mix(in srgb, var(--c-personal) 12%, var(--bg)); border: 1px solid color-mix(in srgb, var(--c-personal) 30%, var(--bg)); }
+  .compare h4 { font-size: 17px; margin-bottom: 8px; text-align: left; }
+
+  /* 已上線但尚未寫成案例文章的功能：用虛線框與標籤區隔，圖片本身維持清晰、不加遮罩 */
+  .future-block { margin-top: 48px; padding: 24px; border: 1px dashed var(--line); border-radius: var(--radius); }
+  .future-label { font-size: var(--fs-sm); color: var(--ink-soft); font-weight: 600; margin-bottom: 14px; }
+  .future-block .shot { margin-top: 0; }
+
+  /* 功能巡覽版：主要功能 icon 排 + 主色系色票 */
+  .feature-overview, .color-section { margin: 40px 0; }
+  .feat-h { font-size: var(--fs-sm); font-weight: 600; color: var(--ink-soft); letter-spacing: .04em; margin-bottom: 16px; }
+  .feat-icons { display: flex; flex-wrap: wrap; gap: 24px; }
+  .feat-icon { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 76px; text-align: center; }
+  .feat-icon .fi-ico { color: var(--primary); line-height: 1; }
+  .feat-icon .ico { width: 30px; height: 30px; }
+  .feat-icon span:last-child { font-size: var(--fs-sm); color: var(--ink); }
+  .color-section p { color: var(--ink-soft); font-size: 16px; line-height: 1.75; }
+  .palette { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 16px; }
+  .swatch { display: flex; flex-direction: column; gap: 8px; }
+  .sw-chip { width: 76px; height: 76px; border-radius: 12px; border: 1px solid var(--line); box-shadow: var(--shadow-soft); }
+  .sw-hex { font-size: var(--fs-sm); color: var(--ink-soft); font-variant-numeric: tabular-nums; text-align: center; }
+
+  /* 線上試用：作品有 liveUrl 才出現，放在內文最後、下一件作品之前 */
+  .live-cta {
+    display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap;
+    margin-top: 8px; padding: 22px 24px;
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+    transition: border-color var(--t-out) var(--ease);
+  }
+  .live-cta:hover { border-color: var(--accent); }
+  .live-cta .lbl { font-size: var(--fs-sm); color: var(--ink-soft); }
+  .live-cta .nm { font-weight: 600; font-size: 18px; margin-top: 2px; }
+  .live-cta .note { font-size: var(--fs-sm); color: var(--ink-soft); margin-top: 6px; line-height: 1.6; }
+  .live-cta .url { font-size: 13px; color: var(--ink-soft); margin-top: 8px; word-break: break-all; opacity: .8; }
+  .live-cta .btn {
+    text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
+    white-space: nowrap; padding: 11px 20px;
+  }
+  .live-cta .btn .ico { width: 16px; height: 16px; }
+  .next-card {
+    margin-top: 40px; padding: 24px 28px; display: flex; justify-content: space-between; align-items: center;
+    cursor: pointer; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface);
+    transition: transform var(--t-in) var(--ease), box-shadow var(--t-in) var(--ease), border-color var(--t-in) var(--ease);
+  }
+  .next-card:hover { transform: translateY(-4px); box-shadow: var(--shadow); border-color: var(--accent); }
+  .next-card .lbl { font-size: var(--fs-sm); color: var(--ink-soft); }
+  .next-card .nm { font-weight: 600; font-size: 18px; }
+
+  /* ---------- 圖牆（瀑布流） ---------- */
+  .shot-gallery { columns: 3; column-gap: var(--gap); margin-bottom: 8px; }
+  .shot-item {
+    break-inside: avoid; margin: 0 0 var(--gap); position: relative; cursor: zoom-in;
+    border-radius: 12px; overflow: hidden; box-shadow: var(--shadow-soft);
+    transition: transform var(--t-in) var(--ease), box-shadow var(--t-in) var(--ease);
+  }
+  .shot-item img, .shot-item video, .shot-item .ph { width: 100%; display: block; }
+  .shot-item:hover { transform: translateY(-4px); box-shadow: var(--shadow); }
+  .shot-item .zoom {
+    position: absolute; top: 10px; right: 10px; width: 30px; height: 30px; border-radius: 999px;
+    background: rgba(28,26,23,.55); color: #fff; display: flex; align-items: center; justify-content: center;
+    font-size: 15px; opacity: 0; transform: scale(.85);
+    transition: opacity var(--t-in) var(--ease), transform var(--t-in) var(--ease);
+  }
+  .shot-item:hover .zoom { opacity: 1; transform: none; }
+
+  /* ---------- Lightbox 放大預覽 ---------- */
+  .lightbox {
+    position: fixed; inset: 0; z-index: 100; display: none;
+    align-items: center; justify-content: center;
+    background: rgba(20,18,15,.92); cursor: zoom-out;
+    animation: lbfade var(--t-in) var(--ease);
+  }
+  .lightbox.open { display: flex; }
+  @keyframes lbfade { from { opacity: 0; } to { opacity: 1; } }
+  .lightbox img, .lightbox video, .lightbox .ph {
+    max-width: 88vw; max-height: 86vh; border-radius: 10px; box-shadow: var(--shadow);
+    cursor: default;
+  }
+  .lightbox .ph { width: 60vw; aspect-ratio: 4/3; font-size: 1rem; }
+  .lb-btn {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    width: 48px; height: 48px; border-radius: 999px; border: 0; cursor: pointer;
+    background: rgba(255,255,255,.14); color: #fff; font-size: 22px;
+    display: flex; align-items: center; justify-content: center;
+    transition: background var(--t-out) var(--ease);
+  }
+  .lb-btn:hover { background: var(--accent); color: var(--on-accent); }
+  .lb-prev { left: 20px; } .lb-next { right: 20px; }
+  .lb-close { position: absolute; top: 18px; right: 20px; top:18px; }
+  .lb-count { position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,.8); font-size: var(--fs-sm); }
+
+  /* ============================================================
+     關於我 / 聯絡
+     ============================================================ */
+  .about-grid { display: grid; grid-template-columns: 280px 1fr; gap: 48px; align-items: start; }
+  .avatar { aspect-ratio: 1; border-radius: var(--radius); overflow: hidden; background: linear-gradient(135deg, color-mix(in srgb, var(--c-uiux) 24%, var(--bg)), color-mix(in srgb, var(--primary) 20%, var(--bg))); display: flex; align-items: center; justify-content: center; color: var(--ink-soft); font-size: var(--fs-sm); box-shadow: var(--shadow-soft); }
+  .avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .about h2 { font-size: var(--fs-h2); margin-bottom: 16px; }
+  .about p { color: var(--ink-soft); margin-bottom: 16px; max-width: 62ch; line-height: 1.75; text-align: justify; }
+  .tags { display: flex; flex-wrap: wrap; gap: 8px; margin: 20px 0; }
+  .tag { font-size: var(--fs-sm); padding: 5px 12px; border-radius: 999px; background: var(--fill-control); }
+  .brands { margin-top: 24px; color: var(--ink-soft); font-size: var(--fs-sm); }
+  .brands b { color: var(--ink); }
+
+  /* 使用軟體 */
+  .tools { margin-top: 28px; }
+  .tools-h { font-size: var(--fs-sm); font-weight: 600; color: var(--ink-soft); letter-spacing: .04em; margin-bottom: 16px; }
+  .tool-grid { display: flex; flex-wrap: wrap; gap: 20px 18px; }
+  .tool { width: 72px; text-align: center; }
+  .tool-ic {
+    width: 64px; height: 64px; margin: 0 auto 8px; border-radius: 16px;
+    background: var(--fill-control); color: var(--primary);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 18px; letter-spacing: -.02em;
+    transition: transform var(--t-in) var(--ease), box-shadow var(--t-in) var(--ease), background var(--t-out) var(--ease);
+  }
+  .tool-ic img { width: 60%; height: 60%; object-fit: contain; }
+  .tool:hover .tool-ic { transform: translateY(-4px); box-shadow: var(--shadow-soft); background: var(--accent-tint); }
+  .tool span { font-size: var(--fs-sm); color: var(--ink); }
+
+  /* 工作經歷時間軸 + 教育背景 */
+  .about-sub { font-size: var(--fs-sm); font-weight: 600; color: var(--ink-soft); letter-spacing: .04em; margin: 32px 0 16px; }
+  .timeline { border-left: 2px solid var(--line); margin-left: 5px; padding-left: 24px; }
+  .exp { position: relative; padding-bottom: 22px; }
+  .exp:last-child { padding-bottom: 0; }
+  .exp::before {
+    content: ""; position: absolute; left: -31px; top: 5px;
+    width: 11px; height: 11px; border-radius: 50%;
+    background: var(--primary); border: 2px solid var(--bg);
+  }
+  .exp:first-child::before { background: var(--accent); box-shadow: 0 0 0 4px var(--accent-tint); }  /* 現職用薄荷青點睛 */
+  .exp .period { font-size: var(--fs-sm); color: var(--ink-soft); }
+  .exp .role { font-weight: 600; margin-top: 2px; }
+  .exp .role .co { color: var(--ink-soft); font-weight: 400; }
+  .exp .desc { color: var(--ink-soft); font-size: 16px; line-height: 1.7; margin-top: 4px; max-width: 62ch; text-align: justify; }
+  .more-resume { font-size: var(--fs-sm); color: var(--ink-soft); margin-top: 16px; }
+  .more-resume a { color: var(--primary); font-weight: 600; }
+  .more-resume a:hover { text-decoration: underline; }
+  .edu { list-style: none; }
+  .edu li { font-size: 16px; color: var(--ink); padding: 6px 0; }
+
+  .contact { text-align: center; }
+  .contact h2 { font-size: var(--fs-h2); margin-bottom: 12px; }
+  .contact p { color: var(--ink-soft); margin-bottom: 32px; }
+  .links { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+  .link-card { padding: 22px 28px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); min-width: 160px; transition: transform var(--t-in) var(--ease), box-shadow var(--t-in) var(--ease); }
+  .link-card:hover { transform: translateY(-6px); box-shadow: var(--shadow); border-color: var(--accent); }
+  .link-card .k { font-size: var(--fs-sm); color: var(--ink-soft); }
+  .link-card .v { font-weight: 600; margin-top: 4px; }
+
+  footer { border-top: 1px solid var(--line); padding: 32px 0; color: var(--ink-soft); font-size: var(--fs-sm); text-align: center; }
+
+  /* ============================================================
+     RWD — 手機版
+     ============================================================ */
+  @media (max-width: 860px) {
+    .hero { padding-top: 20px; }                  /* 手機減少頂部留白 */
+    .hero-grid { grid-template-columns: 1fr; gap: 20px; }
+    .hero h1 { line-height: 1.2; }
+    .hero .sub { margin-top: 12px; }
+    .hero .cta { margin-top: 18px; }
+    .hero-photo { aspect-ratio: 16/9; }           /* 照片排文字/按鈕之後，不再卡在最上面 */
+    .trust { margin-top: 24px; }
+    .theme-strip { grid-template-columns: repeat(3, 1fr); }   /* 六張並排在手機上太窄，收成兩排三張 */
+    .about-grid { grid-template-columns: 1fr; gap: 24px; }
+    .avatar { max-width: 220px; }
+    .skills { grid-template-columns: 1fr 1fr; }       /* 專長卡手機兩欄 */
+    .about-teaser { grid-template-columns: 1fr; gap: 20px; }
+    .about-teaser .avatar { max-width: 180px; }
+    .gallery { grid-template-columns: 1fr; }   /* 單欄大方圖 */
+    .shot-gallery { columns: 2; }       /* 圖牆手機改兩欄 */
+    .shot-item .zoom { opacity: 1; transform: none; }  /* 手機沒 hover → 放大鈕常駐 */
+    .lb-btn { width: 40px; height: 40px; }
+    .lb-prev { left: 8px; } .lb-next { right: 8px; }
+    .arrow { opacity: 1; transform: none; }  /* 手機沒 hover → 箭頭常駐 */
+    .gallery:hover .card { opacity: 1; }
+    .compare { grid-template-columns: 1fr; }
+    .step { grid-template-columns: 40px 1fr; gap: 6px; }
+    .step .no { font-size: 36px; }
+
+    /* 漢堡選單 */
+    .hamburger { display: block; }
+    .nav-links {
+      position: fixed; inset: 64px 0 auto 0; flex-direction: column; gap: 0;
+      background: var(--surface); border-bottom: 1px solid var(--line);
+      padding: 8px 24px 16px; align-items: stretch;
+      transform: translateY(-12px); opacity: 0; pointer-events: none;
+      transition: transform var(--t-out) var(--ease), opacity var(--t-out) var(--ease);
+    }
+    .nav-links.open { transform: none; opacity: 1; pointer-events: auto; }
+    .nav-link { padding: 14px 0; font-size: 1rem; }     /* 加高好按 */
+    .nav-link::after { display: none; }
+    .nav-links .btn { margin-top: 10px; text-align: center; }
+    /* 主按鈕直向堆疊、加高 */
+    .hero .cta { flex-direction: column; }
+    .hero .cta .btn { padding: 14px 18px; font-size: 1rem; }
+    /* 分類膠囊可橫向滑動 */
+    .filters { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
+    .pill { flex: 0 0 auto; }
+  }
+
+  /* 尊重「減少動態」偏好 */
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===================== 導覽列 ===================== -->
+<header class="nav">
+  <div class="wrap nav-inner">
+    <div class="logo" onclick="go('home')">Yuan<span>.</span></div>
+    <div class="nav-right">
+      <nav class="nav-links" id="navlinks">
+        <button class="nav-link active" data-view="home" data-i18n="nav.works" onclick="go('home')">作品</button>
+        <button class="nav-link" data-view="about" data-i18n="nav.about" onclick="go('about')">關於我</button>
+        <button class="nav-link" data-view="contact" data-i18n="nav.contact" onclick="go('contact')">聯絡</button>
+        <a class="btn btn-primary" data-i18n="nav.resume" href="resume.pdf" target="_blank" rel="noopener" download="蔡適遠Yuan_2026履歷.pdf">履歷下載</a>
+      </nav>
+      <button class="lang-toggle" id="langBtn" aria-label="切換語言 / Switch language" onclick="toggleLang()">EN</button>
+      <button class="hamburger" id="ham" aria-label="選單 / Menu" onclick="toggleMenu()">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- ===================== 首頁 = Hero + 作品 ===================== -->
+  <section class="view active" id="view-home">
+    <div class="wrap hero">
+      <div class="hero-grid">
+        <div>
+          <h1 data-i18n-html="hero.h1">嗨，我是 <span class="hl">Yuan</span> <span class="wave">👋</span><br>我設計產品，也把它們做出來。</h1>
+          <p class="sub" data-i18n="hero.sub">10+ 年資歷 · 研究 → 設計 → AI 輔助實作 · 能獨立驗證並交付產品</p>
+          <div class="cta">
+            <button class="btn btn-primary" onclick="document.getElementById('works').scrollIntoView()"><span data-i18n="hero.cta1">來看看我做了什麼</span> <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></button>
+            <button class="btn btn-ghost" data-i18n="hero.cta2" onclick="go('contact')">跟我聊聊</button>
+          </div>
+          <p class="trust" data-i18n-html="hero.trust">一路上玩過的專案：<b>PRO360達人網 · 新東陽 · Gogoro · 驅動城市 · 千山淨水</b></p>
+        </div>
+        <div class="hero-photo" data-i18n="hero.photo">（這裡放一張自然有笑容的照片）</div>
+      </div>
+    </div>
+
+    <div class="wrap" id="works" style="padding-top:32px;">
+      <div class="filters" id="filters">
+        <button class="pill active" data-cat="all" data-i18n="filter.all" onclick="filter('all', this)">全部</button>
+        <button class="pill" data-cat="uiux" data-i18n="filter.uiux" onclick="filter('uiux', this)">UI · UX</button>
+        <button class="pill" data-cat="build" data-i18n="filter.build" onclick="filter('build', this)">自建產品</button>
+        <button class="pill" data-cat="graphic" data-i18n="filter.graphic" onclick="filter('graphic', this)">平面設計</button>
+        <button class="pill" data-cat="personal" data-i18n="filter.personal" onclick="filter('personal', this)">個人創作</button>
+      </div>
+      <div class="gallery" id="gallery"><!-- JS 生成 --></div>
+      <p class="empty" id="empty" data-i18n="empty" style="display:none;">這個分類還沒有作品，先看看其他的吧 🙂</p>
+    </div>
+
+    <!-- ③ 我能做什麼 Services -->
+    <div class="wrap home-sec">
+      <h2 data-i18n="svc.h2">我能做什麼</h2>
+      <p class="sec-sub" data-i18n="svc.sub">從研究到介面，幫產品想清楚、也做得好看。</p>
+      <div class="skills">
+        <div class="skill"><div class="ic"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg></div><h3 data-i18n="svc.1t">UX 研究與定義</h3><p data-i18n="svc.1d">從使用者訪談、數據與行為觀察出發，把模糊的需求定義成清楚的問題。</p></div>
+        <div class="skill"><div class="ic"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z"/><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/></svg></div><h3 data-i18n="svc.2t">介面設計</h3><p data-i18n="svc.2d">從 Wireframe 到 UI 細節，在美感與可用性之間找到平衡，並照顧到每一種邊界狀態。</p></div>
+        <div class="skill"><div class="ic"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M15.536 11.293a1 1 0 0 0 0 1.414l2.376 2.377a1 1 0 0 0 1.414 0l2.377-2.377a1 1 0 0 0 0-1.414l-2.377-2.377a1 1 0 0 0-1.414 0z"/><path d="M2.297 11.293a1 1 0 0 0 0 1.414l2.377 2.377a1 1 0 0 0 1.414 0l2.377-2.377a1 1 0 0 0 0-1.414L6.088 8.916a1 1 0 0 0-1.414 0z"/><path d="M8.916 17.912a1 1 0 0 0 0 1.415l2.377 2.376a1 1 0 0 0 1.414 0l2.377-2.376a1 1 0 0 0 0-1.415l-2.377-2.376a1 1 0 0 0-1.414 0z"/><path d="M8.916 4.674a1 1 0 0 0 0 1.414l2.377 2.376a1 1 0 0 0 1.414 0l2.377-2.376a1 1 0 0 0 0-1.414l-2.377-2.377a1 1 0 0 0-1.414 0z"/></svg></div><h3 data-i18n="svc.3t">設計系統</h3><p data-i18n="svc.3d">建立可複用的元件與規範，讓設計在團隊與產品規模化時保持一致。</p></div>
+        <div class="skill"><div class="ic"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg></div><h3 data-i18n="svc.4t">AI 輔助實作與驗證</h3><p data-i18n="svc.4d">用 Claude Code 等 AI 工具鏈把設計做成能用的產品，從開發、部署到真實驗證，獨立完成。</p></div>
+      </div>
+    </div>
+
+    <!-- ④ 關於我（簡短版） -->
+    <div class="wrap home-sec">
+      <div class="about-teaser">
+        <div class="avatar"><img src="images/profile_photo.jpg" alt="蔡適遠 Yuan"></div>
+        <div>
+          <h2 data-i18n="teaser.h2">關於我</h2>
+          <p data-i18n="teaser.p">平面設計起家，10+ 年資歷，後來一頭栽進 UI/UX。喜歡把東西做得好看又好用，也很愛跟人聊設計。</p>
+          <button class="btn btn-ghost" onclick="go('about')"><span data-i18n="teaser.btn">更多關於我</span> <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ⑤ 結尾 CTA -->
+    <div class="wrap home-cta">
+      <h2 data-i18n="cta.h2">想聊聊嗎？</h2>
+      <p data-i18n="cta.p">不管是工作機會還是專案合作，都歡迎找我。</p>
+      <div class="cta-row">
+        <a class="btn btn-primary" data-i18n="cta.mail" href="mailto:yuan0903@gmail.com">寄信給我</a>
+        <button class="btn btn-ghost" data-i18n="cta.contact" onclick="go('contact')">看聯絡方式</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== 作品內頁 ===================== -->
+  <section class="view" id="view-detail">
+    <div class="wrap detail" id="detail"><!-- JS 生成 --></div>
+  </section>
+
+  <!-- ===================== 關於我 ===================== -->
+  <section class="view" id="view-about">
+    <div class="wrap about-grid">
+      <div class="avatar"><img src="images/profile_photo.jpg" alt="蔡適遠 Yuan"></div>
+      <div class="about">
+        <h2 data-i18n="about.h2">關於我</h2>
+        <p data-i18n="about.p1">我是蔡適遠（Yuan），來自台北，超過十年的設計經驗。從平面設計出發，做過海報、型錄、包裝，後來因為著迷於「人怎麼使用產品」，轉型投入 UI/UX，一路做到雙邊媒合平台的產品設計。</p>
+        <p data-i18n="about.p2">在 PRO360 達人網的八年多，我負責從使用者研究、流程規劃到介面設計的完整循環，透過數據驗證持續優化與迭代，也深刻理解平台兩端使用者的需求如何平衡。曾參與新東陽、Gogoro、驅動城市與千山淨水等品牌專案。</p>
+        <p data-i18n="about.p3">這幾年我把設計往前推了一步，開始自己動手把想法做成能用的產品。從需求定義、介面設計，到用 AI 工具鏈開發與部署，都能獨立完成。我相信能親手驗證的設計，才走得更遠。</p>
+        <div class="tags">
+          <span class="tag" data-i18n="tag.1">UX 研究</span>
+          <span class="tag" data-i18n="tag.2">介面設計</span>
+          <span class="tag" data-i18n="tag.3">設計系統</span>
+          <span class="tag" data-i18n="tag.4">原型製作</span>
+          <span class="tag" data-i18n="tag.5">平面 / 視覺</span>
+        </div>
+
+        <div class="tools">
+          <div class="tools-h" data-i18n="tools.h">使用軟體</div>
+          <div class="tool-grid">
+            <!-- 之後可把 .tool-ic 內的字母換成真 logo：<img src="images/figma.svg" alt="Figma"> -->
+            <div class="tool"><div class="tool-ic"><img src="images/figma.svg" alt="Figma"></div><span>Figma</span></div>
+            <div class="tool"><div class="tool-ic">Ps</div><span>Photoshop</span></div>
+            <div class="tool"><div class="tool-ic">Ai</div><span>Illustrator</span></div>
+            <div class="tool"><div class="tool-ic">Cv</div><span>Canva</span></div>
+            <div class="tool"><div class="tool-ic">GPT</div><span>ChatGPT</span></div>
+            <div class="tool"><div class="tool-ic"><img src="images/sketch.svg" alt="Sketch"></div><span>Sketch</span></div>
+            <div class="tool"><div class="tool-ic"><img src="images/sparkar.svg" alt="Spark AR"></div><span>Spark AR</span></div>
+            <div class="tool"><div class="tool-ic"><img src="images/apple.svg" alt="Macintosh"></div><span>Macintosh</span></div>
+          </div>
+        </div>
+
+        <div class="about-sub" data-i18n="about.work">工作經歷</div>
+        <div class="timeline">
+          <div class="exp">
+            <div class="period">2017 / 11 – 現在</div>
+            <div class="role" data-i18n-html="exp1.role">UI/UX 設計師 <span class="co">· 達人網科技（原美商塗鴉科技 · PRO360 接案媒合平台）</span></div>
+            <div class="desc" data-i18n="exp1.desc">Web / App 介面設計與功能優化迭代、定義 UI 設計規範、多國語系介面、原型互動與體驗流程設計。</div>
+          </div>
+          <div class="exp">
+            <div class="period">2016 / 9 – 2017 / 8</div>
+            <div class="role" data-i18n-html="exp2.role">行動應用 UI/UX 設計 <span class="co">· 醬子科技（App 行動應用開發）</span></div>
+            <div class="desc" data-i18n="exp2.desc">iOS / Android 介面與使用者體驗流程設計（驅動城市、新東陽、Gogoro、千山淨水…等）、Icon 設計與活動文宣海報。</div>
+          </div>
+          <div class="exp">
+            <div class="period">2013 – 2015</div>
+            <div class="role" data-i18n-html="exp3.role">設計主管 <span class="co">· 祥裕國際（手機配件）</span></div>
+            <div class="desc" data-i18n="exp3.desc">品牌視覺、包裝與授權手機殼設計（LINE、三麗鷗、SWAROVSKI）、櫥窗與商品攝影。</div>
+          </div>
+          <div class="exp">
+            <div class="period">2009 – 2012</div>
+            <div class="role" data-i18n-html="exp4.role">平面設計 <span class="co">· 美麗樂國際、如果原創設計</span></div>
+            <div class="desc" data-i18n="exp4.desc">平面、包裝與視覺設計。</div>
+          </div>
+        </div>
+        <p class="more-resume" data-i18n-html="more">完整經歷與條列成果請見 <a href="resume.pdf" target="_blank" rel="noopener" download="蔡適遠Yuan_2026履歷.pdf">下載履歷 <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a></p>
+
+        <div class="about-sub" data-i18n="about.edu">教育背景</div>
+        <ul class="edu">
+          <li data-i18n="edu.1">臺北科技大學　互動設計系（碩士）</li>
+          <li data-i18n="edu.2">萬能科技大學　商業設計系（學士）</li>
+          <li data-i18n="edu.3">復興商工　美工科</li>
+        </ul>
+
+        <p class="brands" data-i18n-html="brands">一起做過的品牌：<b>PRO360達人網 · 新東陽 · Gogoro · 驅動城市 · 千山淨水</b></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== 聯絡 ===================== -->
+  <section class="view" id="view-contact">
+    <div class="wrap contact">
+      <h2 data-i18n="contact.h2">想聊聊嗎？</h2>
+      <p data-i18n="contact.p">不管是工作機會還是專案合作，都歡迎找我。</p>
+      <div class="links">
+        <a class="link-card" href="mailto:yuan0903@gmail.com"><div class="k" data-i18n="link.email">Email</div><div class="v">yuan0903@gmail.com</div></a>
+        <a class="link-card" href="https://www.behance.net/yuantsai" target="_blank" rel="noopener"><div class="k" data-i18n="link.portfolio">作品平台</div><div class="v">Behance <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div></a>
+        <a class="link-card" href="https://dribbble.com/yuantsai" target="_blank" rel="noopener"><div class="k" data-i18n="link.portfolio">作品平台</div><div class="v">Dribbble <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div></a>
+        <a class="link-card" href="https://www.linkedin.com/in/yuantsai/" target="_blank" rel="noopener"><div class="k" data-i18n="link.connect">職業檔案</div><div class="v">LinkedIn <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div></a>
+        <a class="link-card" href="resume.pdf" target="_blank" rel="noopener" download="蔡適遠Yuan_2026履歷.pdf"><div class="k" data-i18n="link.cv">完整履歷</div><div class="v"><span data-i18n="link.cvv">下載 PDF</span> <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div></a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer><div class="wrap" data-i18n="footer">© 2026 蔡適遠 Yuan · 作品集原型（內容為佔位，動線可操作）</div></footer>
+
+<!-- ===================== Lightbox 放大預覽 ===================== -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <button class="lb-btn lb-close" aria-label="關閉" onclick="event.stopPropagation();closeLightbox()">✕</button>
+  <button class="lb-btn lb-prev" aria-label="上一張 / Previous" onclick="event.stopPropagation();lbStep(-1)"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+  <div id="lb-stage" onclick="event.stopPropagation()"></div>
+  <button class="lb-btn lb-next" aria-label="下一張 / Next" onclick="event.stopPropagation();lbStep(1)"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
+  <div class="lb-count" id="lb-count"></div>
+</div>
+
+<script>
+  /* ============================================================
+     作品資料 — 之後把佔位換成真內容
+     spec: deep（深案例）/ opt（優化型）/ light（輕案例）
+     ============================================================ */
+  /* 線性 icon（Lucide）— 資訊列與放大鈕用 */
+  const ICON = {
+    'building-2': `<path d="M10 12h4"/><path d="M10 8h4"/><path d="M14 21v-3a2 2 0 0 0-4 0v3"/><path d="M6 10H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-2"/><path d="M6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16"/>`,
+    'smartphone': `<rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/>`,
+    'external-link': `<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>`,
+    'image-plus': `<path d="M16 5h6"/><path d="M19 2v6"/><path d="M21 11.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7.5"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/><circle cx="9" cy="9" r="2"/>`,
+    'target': `<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>`,
+    'wrench': `<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.106-3.105c.32-.322.863-.22.983.218a6 6 0 0 1-8.259 7.057l-7.91 7.91a1 1 0 0 1-2.999-3l7.91-7.91a6 6 0 0 1 7.057-8.259c.438.12.54.662.219.984z"/>`,
+    'calendar': `<path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/>`,
+    'expand': `<path d="m15 15 6 6"/><path d="m15 9 6-6"/><path d="M21 16v5h-5"/><path d="M21 8V3h-5"/><path d="M3 16v5h5"/><path d="m3 21 6-6"/><path d="M3 8V3h5"/><path d="M9 9 3 3"/>`,
+    'arrow-right': `<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>`,
+    'arrow-left': `<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>`,
+    'chevron-left': `<path d="m15 18-6-6 6-6"/>`,
+    'chevron-right': `<path d="m9 18 6-6-6-6"/>`,
+    'house': `<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>`,
+    'user': `<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>`,
+    'gift': `<path d="M12 7v14"/><path d="M20 11v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8"/><path d="M7.5 7a1 1 0 0 1 0-5A4.8 8 0 0 1 12 7a4.8 8 0 0 1 4.5-5 1 1 0 0 1 0 5"/><rect x="3" y="7" width="18" height="4" rx="1"/>`,
+    'map-pin': `<path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>`,
+    'ticket': `<path d="M2 9a3 3 0 1 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 1 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M9 9h.01"/><path d="m15 9-6 6"/><path d="M15 15h.01"/>`,
+    'chart-pie': `<path d="M21 12c.552 0 1.005-.449.95-.998a10 10 0 0 0-8.953-8.951c-.55-.055-.998.398-.998.95v8a1 1 0 0 0 1 1z"/><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/>`,
+    'chart-line': `<path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="m19 9-5 5-4-4-3 3"/>`,
+    'users': `<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><path d="M16 3.128a4 4 0 0 1 0 7.744"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><circle cx="9" cy="7" r="4"/>`,
+    'settings': `<path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/><circle cx="12" cy="12" r="3"/>`,
+    'search': `<path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/>`,
+    'briefcase': `<path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><rect width="20" height="14" x="2" y="6" rx="2"/>`,
+    'message-circle': `<path d="M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092 10 10 0 1 0-4.777-4.719"/>`,
+    'search-x': `<path d="m13.5 8.5-5 5"/><path d="m8.5 8.5 5 5"/><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>`,
+  };
+  function icon(name){ return `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">${ICON[name] || ''}</svg>`; }
+  // 統一產生「圖片/佔位框 + 圓角容器 + 圖說」，caption 可省略
+  // 圖牆／lightbox 用：.mp4/.webm 輸出自動播放的靜音循環影片，其餘當圖片
+  function media(src, alt){
+    return /\.(mp4|webm)$/i.test(src)
+      ? `<video src="${src}" autoplay muted loop playsinline preload="metadata" aria-label="${alt}"></video>`
+      : `<img src="${src}" alt="${alt}">`;
+  }
+
+  function shot(mediaHtml, caption, extraStyle){
+    return `<div class="shot"${extraStyle ? ` style="${extraStyle}"` : ''}>
+      <div class="shot-media">${mediaHtml}</div>
+      ${caption ? `<div class="shot-cap">${caption}</div>` : ''}
+    </div>`;
+  }
+
+  // 手機截圖並排（選填）：沒給 imgs 就整列不輸出，其他作品不受影響
+  function shotRow(w, imgs){
+    if (!imgs || !imgs.length) return '';
+    return `<div class="shot-row">${imgs.map(r =>
+      shot(`<img src="${r.src}" alt="${L(w,'title')}">`, DICT['d.'+w.id+'.'+r.cap] ? TD(w, r.cap) : null)
+    ).join('')}</div>`;
+  }
+
+  // 色票列（選填）：strip.imgs 每項 {src, cap}，cap 是圖下的短標；strip.cap 是整列的說明
+  function themeStrip(w, strip){
+    if (!strip || !strip.imgs || !strip.imgs.length) return '';
+    return `<div class="theme-strip">${strip.imgs.map(r =>
+      `<figure><img src="${r.src}" alt="${TD(w, r.cap)}"><figcaption>${TD(w, r.cap)}</figcaption></figure>`
+    ).join('')}</div>
+    ${strip.cap ? `<div class="strip-cap">${TD(w, strip.cap)}</div>` : ''}`;
+  }
+
+  const CAT = {
+    uiux:     { label: 'UI · UX',   labelEn: 'UI · UX',   color: 'var(--c-uiux)' },
+    build:    { label: '自建產品',   labelEn: 'Build',     color: 'var(--c-build)' },
+    graphic:  { label: '平面設計',   labelEn: 'Graphic',   color: 'var(--c-graphic)' },
+    personal: { label: '個人創作',   labelEn: 'Personal',  color: 'var(--c-personal)' },
+  };
+
+  const WORKS = [
+    { id:'gmap',    cat:'uiux',     spec:'deep',  title:'在 Google Map 上提出預訂', titleEn:'Booking Through Google Maps', h:'h2x', ratio:'3/2',
+      client:'PRO360 達人網', clientEn:'PRO360', platform:'Web · 響應式', platformEn:'Web · Responsive', role:'Flow 規劃 · Wireframe · UI · Prototype', roleEn:'User Flow · Wireframe · UI · Prototype', tool:'Figma', toolEn:'Figma', year:'交付工程開發', yearEn:'Launched 2025',
+      lead:'讓使用者直接在地圖上找到服務商並提出預訂，縮短媒合到成交的路徑。',
+      leadEn:'Let users find a provider right on the map and book directly, shortening the path from match to deal.',
+      heroImg:'images/gmap-booking-flow.png',
+      flowImg:'images/gmap-user-flow.png',
+      resultImgs:[
+        {src:'images/gmap-result-1.png', cap:'result1cap'},
+        {src:'images/gmap-result-2.png', cap:'result2cap'},
+        {src:'images/gmap-result-3.png', cap:'result3cap'},
+      ],
+      futureImg:'images/gmap-provider-setup-future.png' },
+    { id:'pro360',  cat:'uiux',     spec:'opt',   title:'登入流程優化', titleEn:'Login Flow Redesign', h:'h1x', ratio:'3/2',
+      client:'PRO360 達人網', clientEn:'PRO360', platform:'Web · App', platformEn:'Web · App', role:'UX 流程重構 · 介面設計 · 流程串接', roleEn:'UX Flow Restructuring · UI Design · Flow Mapping', tool:'Figma', toolEn:'Figma', year:'已上線', yearEn:'Launched 2026',
+      lead:'重構多年疊加的登入流程，把「判斷帳號狀態」的工作從使用者搬到系統身上。',
+      leadEn:'Restructured a login flow tangled by years of iteration, moving the burden of judgment from the user to the system.',
+      flowImg:'images/pro360-login-flow.png',
+      cardImg:'images/pro360-card.png' },   // 卡片用整張流程圖縮進 1:1 的版本，直接裁只會看到糊掉的方塊
+    { id:'shop',    cat:'build',    spec:'deep', title:'旅買記 · 日本購物消費追蹤 App', titleEn:'旅買記 · Japan Shopping Tracker', h:'h1x', ratio:'3/2',
+      client:'個人專案', clientEn:'Personal project', platform:'Web App（行動優先）', platformEn:'Web App (Mobile-first)', role:'產品設計 · 開發', roleEn:'Product Design · Development', tool:'Claude Code + GitHub Pages', toolEn:'Claude Code + GitHub Pages', year:'2026',
+      lead:'旅日購物時追蹤消費與預算的小工具，從發現真實需求、定義 MVP 到自己動手做並上線。',
+      leadEn:'A tool to track spending and budget while shopping in Japan, born from a real personal need, taken from an MVP through to a shipped build.',
+      liveUrl:'https://yuantsai9393.github.io/jp-shop/',
+      heroImg:'images/shop-home.png', heroPhone:true, noStepPh:true,
+      cardImg:'images/shop-card.png',   // 卡片是 1:1 置中裁切，直式手機圖會被切頭尾，改用截圖上半部的方形版
+      deep3Imgs:[
+        {src:'images/shop-add.png',    cap:'mvp1cap'},
+        {src:'images/shop-detail.png', cap:'mvp2cap'},
+      ],
+      deep5Imgs:[
+        {src:'images/shop-trips.png',  cap:'iter1cap'},
+        {src:'images/shop-settings.png', cap:'iter2cap'},
+      ],
+      // 六種主題改用實際畫面並排比較；圖是主列表的標頭裁切版，讓主色佔滿版面
+      deep5Strip:{ cap:'stripcap', imgs:[
+        {src:'images/shop-theme-terracotta.png', cap:'th1'},
+        {src:'images/shop-theme-rose.png',       cap:'th2'},
+        {src:'images/shop-theme-lavender.png',   cap:'th3'},
+        {src:'images/shop-theme-indigo.png',     cap:'th4'},
+        {src:'images/shop-theme-teal.png',       cap:'th5'},
+        {src:'images/shop-theme-graphite.png',   cap:'th6'},
+      ] } },
+    { id:'consumer', cat:'uiux',    spec:'features', title:'PRO360 尋找服務 App', titleEn:'PRO360 Consumer App', h:'h1x', ratio:'3/2',
+      client:'PRO360 達人網', clientEn:'PRO360', platform:'App', platformEn:'App', role:'UI/UX 設計', roleEn:'UI/UX Design', tool:'Figma', toolEn:'Figma', year:'—',
+      lead:'在生活中會遇到許多大小事，這款 App 幫消費者尋找服務、解決問題。使用者把需求發到平台後，系統迅速媒合並發派給合適的服務商；也可以自行搜尋、挑選合適的專家，主動聯繫。',
+      leadEn:'Life throws all kinds of things at you, big and small. This app helps consumers find services and get problems solved: post a need and it\'s quickly matched and dispatched to suitable providers, or search and pick the right expert to contact yourself.',
+      heroImg:'images/consumer-hero.jpg',
+      colors:['#76B82A','#FAB900','#8D8D8D','#C4C4C4','#F7F7F7'],
+      featWide:true,   // 功能圖是橫式流程圖，放滿欄寬
+      features:[
+        {icon:'search',         img:'images/consumer-Search.png'},
+        {icon:'briefcase',      img:'images/consumer-Request.png'},
+        {icon:'message-circle', img:'images/consumer-Message.png'},
+        {icon:'settings',       img:'images/consumer-Setting.png'},
+      ],
+      extra:[ {img:'images/consumer-ErrorEmpty.png'} ] },
+    { id:'xdy',     cat:'uiux',     spec:'features', title:'新東陽 會員送禮 App', titleEn:'Hsin Tung Yang Member Gift App', h:'h3x', ratio:'1/1',
+      client:'新東陽', clientEn:'Hsin Tung Yang', platform:'App', platformEn:'App', role:'UI 設計', roleEn:'UI Design', tool:'—', toolEn:'—', year:'—',
+      lead:'會員送禮 App。除了會員資料記錄、送禮紀錄、門市位置查詢與產品資訊，也提供折扣與特別優惠；有效降低 DM 與產品廣告成本，推動品牌數位化。',
+      leadEn:'A membership gifting app. Beyond member records, gift history, a store locator, and product info, it also offers discounts and special deals, cutting the cost of print DM and product advertising while moving the brand toward digitalization.',
+      heroImg:'images/xdy-hero.jpg',
+      colors:['#910800','#C57D79','#F6F3EE','#929292'],
+      featWide:true,   // 功能圖是橫式流程圖，放滿欄寬
+      features:[
+        {icon:'house',   img:'images/xdy-Homepage.png'},
+        {icon:'user',    img:'images/xdy-Member.png'},
+        {icon:'gift',    img:'images/xdy-Gift.png'},
+        {icon:'map-pin', img:'images/xdy-Shop.png'},
+        {icon:'ticket',  img:'images/xdy-Discount.png'},
+      ] },
+    { id:'water',   cat:'uiux',     spec:'features', title:'千山淨水 健康喝水 App', titleEn:'Chanson Water Health App', h:'h2x', ratio:'1/1',
+      client:'千山淨水', clientEn:'Chanson Water', platform:'App', platformEn:'App', role:'UI 設計', roleEn:'UI Design', tool:'—', toolEn:'—', year:'—',
+      lead:'這款 App 讓喝水變得更有趣。使用者可以記錄自己的喝水習慣，還能設定提醒、督促朋友一起喝水，把喝水變成朋友之間的互動。',
+      leadEn:'An app that makes drinking water more fun. Users can track their own habit, set reminders, and nudge friends to drink together, turning hydration into something shared between friends.',
+      heroImg:'images/water-hero.jpg',
+      colors:['#2F94C1','#84C3D7','#BFD1D3','#EFEFF4'],
+      featWide:true,   // 功能圖是橫式流程圖，放滿欄寬
+      features:[
+        {icon:'chart-pie',  img:'images/water-Homepage.png'},
+        {icon:'chart-line', img:'images/water-Analysis.png'},
+        {icon:'users',      img:'images/water-Friend.png'},
+        {icon:'settings',   img:'images/water-Settings.png'},
+      ] },
+    { id:'poster',  cat:'graphic',  spec:'gallery', title:'平面廣告 / 視覺', titleEn:'Advertising / Visual', h:'h1x', ratio:'3/2',
+      cardImg:'images/ad-poster-card.jpg',   // 首頁縮圖用靜態圖（內頁圖牆才播動態影片）
+      client:'PRO360 · 板農超市', clientEn:'PRO360 · Pcfarm Market', platform:'社群 / 平面', platformEn:'Social / Print', role:'平面設計', roleEn:'Graphic Design', tool:'Illustrator / Photoshop', toolEn:'Illustrator / Photoshop', year:'—',
+      lead:'社群動態廣告、活動海報與紙本 DM 型錄，用版面、色彩與節奏把訊息講清楚，也講得吸引人。',
+      leadEn:'Animated social ads, campaign posters and printed catalog DMs. Using layout, color and rhythm to make the message clear, and worth looking at.',
+      shots:[
+        {src:'images/ad-social2.mp4'},
+        {src:'images/ad-social1.mp4'},
+        {src:'images/ad-dm-cover.jpg'},
+        {src:'images/ad-social4.mp4'},
+        {src:'images/ad-social6.mp4'},
+        {src:'images/ad-melilea-poster.jpg'},
+        {src:'images/ad-social3.mp4'},
+        {src:'images/ad-dm-spread.jpg'},
+        {src:'images/ad-social5.mp4'},
+        {src:'images/ad-social7.mp4'},
+      ] },
+    { id:'case',    cat:'graphic',  spec:'gallery', title:'手機殼設計', titleEn:'Phone Case Design', h:'h3x', ratio:'1/1',
+      cardImg:'images/case-15.jpg',
+      client:'LINE Friends · Swarovski · 三麗鷗', clientEn:'LINE Friends · Swarovski · Sanrio', platform:'產品 / 包裝', platformEn:'Product / Packaging', role:'圖樣 / 產品設計', roleEn:'Pattern / Product Design', tool:'—', toolEn:'—', year:'—',
+      lead:'授權 IP 手機殼的圖樣與產品設計，從水鑽排版、公仔矽膠套到門市陳列。',
+      leadEn:'Pattern and product design for licensed-IP phone cases, from crystal layouts and silicone figure cases to in-store display.',
+      shots:[
+        {src:'images/case-01.jpg'},{src:'images/case-02.jpg'},{src:'images/case-03.jpg'},
+        {src:'images/case-04.jpg'},{src:'images/case-05.jpg'},{src:'images/case-06.jpg'},
+        {src:'images/case-07.jpg'},{src:'images/case-08.jpg'},{src:'images/case-09.jpg'},
+        {src:'images/case-10.jpg'},{src:'images/case-11.jpg'},{src:'images/case-12.jpg'},
+        {src:'images/case-13.jpg'},{src:'images/case-14.jpg'},{src:'images/case-15.jpg'},
+      ] },
+    { id:'illust',  cat:'personal', spec:'gallery', title:'插畫', titleEn:'Illustration', h:'h2x', ratio:'1/1',
+      cardImg:'images/illust-face.jpg',
+      client:'個人創作', clientEn:'Personal work', platform:'—', platformEn:'—', role:'插畫 / 角色設計', roleEn:'Illustration / Character Design', tool:'—', toolEn:'—', year:'2016–17',
+      lead:'原創角色與表情系列（smily zone、Akuma…）。用最少的線條與色塊畫出情緒，再延伸成貼圖、表情符號與標語圖。',
+      leadEn:'Original character and expression series (smily zone, Akuma…). Emotions drawn with the fewest possible lines and color blocks, extended into stickers, reaction icons and slogan pieces.',
+      shots:[
+        {src:'images/illust-reactions.jpg'},
+        {src:'images/illust-apple-girl.jpg'},
+        {src:'images/illust-merrychristmas.png'},
+        {src:'images/illust-halloween.png'},
+        {src:'images/illust-keep-your-smile.jpg'},
+        {src:'images/illust-christmas_elk.png'},
+        {src:'images/illust-Alice-01.png'},
+        {src:'images/illust-gingerbread.png'},
+        {src:'images/illust-akuma01.png'},
+        {src:'images/illust-yuanmuse3.png'},
+        {src:'images/illust-akuma001.png'},
+        {src:'images/illust-face.jpg'},
+      ] },
+    { id:'photo',   cat:'personal', spec:'gallery', title:'攝影', titleEn:'Photography', h:'h1x', ratio:'3/2', draft:true,
+      client:'個人創作', clientEn:'Personal work', platform:'—', platformEn:'—', role:'攝影', roleEn:'Photography', tool:'—', toolEn:'—', year:'—',
+      lead:'生活與旅行攝影，練習構圖與光影的觀察。',
+      leadEn:'Life and travel photography, practicing composition and the play of light.',
+      shots:[ {h:'h1x'},{h:'h2x'},{h:'h1x'},{h:'h3x'},{h:'h1x'},{h:'h2x'} ] },
+  ];
+
+  /* ============================================================
+     i18n — 靜態文字字典 + 語言切換
+     ============================================================ */
+  let LANG = (localStorage.getItem('lang') === 'en') ? 'en' : 'zh';
+  let currentCat = 'all';       // 記住篩選，切語言時不重置
+  let currentDetail = null;     // 記住開啟中的作品
+
+  const DICT = {
+    'nav.works':   { zh:'作品', en:'Works' },
+    'nav.about':   { zh:'關於我', en:'About' },
+    'nav.contact': { zh:'聯絡', en:'Contact' },
+    'nav.resume':  { zh:'履歷下載', en:'Download CV' },
+
+    'hero.h1':   { zh:'嗨，我是 <span class="hl">Yuan</span> <span class="wave">👋</span><br>我設計產品，也把它們做出來。',
+                   en:'Hi, I\'m <span class="hl">Yuan</span> <span class="wave">👋</span><br>I design products, and I build them, too.' },
+    'hero.sub':  { zh:'10+ 年資歷 · 研究 → 設計 → AI 輔助實作 · 能獨立驗證並交付產品',
+                   en:'10+ Years of Experience · Research → Design → AI-Assisted Development · Independently Validate & Ship Products' },
+    'hero.cta1': { zh:'來看看我做了什麼', en:'See what I\'ve made' },
+    'hero.cta2': { zh:'跟我聊聊', en:'Let\'s talk' },
+    'hero.trust':{ zh:'一路上玩過的專案：<b>PRO360達人網 · 新東陽 · Gogoro · 驅動城市 · 千山淨水</b>',
+                   en:'Brands I\'ve worked with: <b>PRO360 · Hsin Tung Yang · Gogoro · CityDrive · Chanson Water</b>' },
+    'hero.photo':{ zh:'（這裡放一張自然有笑容的照片）', en:'(a natural, smiling photo here)' },
+    'photo':     { zh:'（一張有溫度的照片）', en:'(a warm, friendly photo)' },
+
+    'filter.all':     { zh:'全部', en:'All' },
+    'filter.uiux':    { zh:'UI · UX', en:'UI · UX' },
+    'filter.build':   { zh:'自建產品', en:'Build' },
+    'filter.graphic': { zh:'平面設計', en:'Graphic' },
+    'filter.personal':{ zh:'個人創作', en:'Personal' },
+    'empty':          { zh:'這個分類還沒有作品，先看看其他的吧 🙂', en:'No works in this category yet, take a look at the others 🙂' },
+
+    'svc.h2':  { zh:'我能做什麼', en:'What I Do' },
+    'svc.sub': { zh:'從研究到介面，幫產品想清楚、也做得好看。', en:'From research to interface, thinking products through and making them look great.' },
+    'svc.1t':  { zh:'UX 研究與定義', en:'UX Research & Definition' },
+    'svc.1d':  { zh:'從使用者訪談、數據與行為觀察出發，把模糊的需求定義成清楚的問題。', en:'Turning vague needs into well-defined problems through interviews, data, and behavioral insights.' },
+    'svc.2t':  { zh:'介面設計', en:'Interface Design' },
+    'svc.2d':  { zh:'從 Wireframe 到 UI 細節，在美感與可用性之間找到平衡，並照顧到每一種邊界狀態。', en:'From wireframes to polished UI, balancing aesthetics with usability, edge cases included.' },
+    'svc.3t':  { zh:'設計系統', en:'Design Systems' },
+    'svc.3d':  { zh:'建立可複用的元件與規範，讓設計在團隊與產品規模化時保持一致。', en:'Reusable components and guidelines that keep design consistent as products and teams scale.' },
+    'svc.4t':  { zh:'AI 輔助實作與驗證', en:'AI-Assisted Build & Validation' },
+    'svc.4d':  { zh:'用 Claude Code 等 AI 工具鏈把設計做成能用的產品，從開發、部署到真實驗證，獨立完成。', en:'Turning designs into working products with AI toolchains like Claude Code, from development to deployment to real-world validation.' },
+
+    'teaser.h2':  { zh:'關於我', en:'About' },
+    'teaser.p':   { zh:'平面設計起家，10+ 年資歷，後來一頭栽進 UI/UX。喜歡把東西做得好看又好用，也很愛跟人聊設計。',
+                    en:'Graphic-design roots, 10+ years, then I dove into UI/UX. I love making things look good and work well, and chatting about design.' },
+    'teaser.btn': { zh:'更多關於我', en:'More about me' },
+
+    'cta.h2':      { zh:'想聊聊嗎？', en:'Want to chat?' },
+    'cta.p':       { zh:'不管是工作機會還是專案合作，都歡迎找我。', en:'Whether it\'s a job opportunity or a project, feel free to reach out.' },
+    'cta.mail':    { zh:'寄信給我', en:'Email me' },
+    'cta.contact': { zh:'看聯絡方式', en:'Contact info' },
+
+    'about.h2':   { zh:'關於我', en:'About' },
+    'about.p1':   { zh:'我是蔡適遠（Yuan），來自台北，超過十年的設計經驗。從平面設計出發，做過海報、型錄、包裝，後來因為著迷於「人怎麼使用產品」，轉型投入 UI/UX，一路做到雙邊媒合平台的產品設計。',
+                    en:'I\'m Yuan Tsai, a Taipei-based designer with 10+ years of experience. I started in graphic design, working on posters, catalogs, and packaging, then moved into UI/UX out of a fascination with how people actually use products, eventually specializing in product design for two-sided marketplaces.' },
+    'about.p2':   { zh:'在 PRO360 達人網的八年多，我負責從使用者研究、流程規劃到介面設計的完整循環，透過數據驗證持續優化與迭代，也深刻理解平台兩端使用者的需求如何平衡。曾參與新東陽、Gogoro、驅動城市與千山淨水等品牌專案。',
+                    en:'Over eight years at PRO360, I\'ve owned the full cycle from user research and flow planning to interface design, iterating with data and balancing the needs of both sides of the platform. Brand projects include Hsin Tung Yang, Gogoro, Drive City, and Chanson Water.' },
+    'about.p3':   { zh:'這幾年我把設計往前推了一步，開始自己動手把想法做成能用的產品。從需求定義、介面設計，到用 AI 工具鏈開發與部署，都能獨立完成。我相信能親手驗證的設計，才走得更遠。',
+                    en:'In recent years, I\'ve pushed my practice one step further: building working products myself. From defining needs and designing interfaces to developing and shipping with an AI-powered toolchain, I handle the whole process on my own. I believe designs you can validate with your own hands go further.' },
+    'tag.1': { zh:'UX 研究', en:'UX Research' },
+    'tag.2': { zh:'介面設計', en:'UI Design' },
+    'tag.3': { zh:'設計系統', en:'Design Systems' },
+    'tag.4': { zh:'原型製作', en:'Prototyping' },
+    'tag.5': { zh:'平面 / 視覺', en:'Graphic / Visual' },
+    'tools.h':    { zh:'使用軟體', en:'Tools' },
+    'about.work': { zh:'工作經歷', en:'Experience' },
+    'about.edu':  { zh:'教育背景', en:'Education' },
+
+    'exp1.role': { zh:'UI/UX 設計師 <span class="co">· 達人網科技（原美商塗鴉科技 · PRO360 接案媒合平台）</span>',
+                   en:'UI/UX Designer <span class="co">· PRO360 (formerly Tuya Inc.) · services marketplace</span>' },
+    'exp1.desc': { zh:'Web / App 介面設計與功能優化迭代、定義 UI 設計規範、多國語系介面、原型互動與體驗流程設計。',
+                   en:'Web & app UI design and data-driven iteration, defining UI guidelines, multilingual interfaces, prototyping and UX flows.' },
+    'exp2.role': { zh:'行動應用 UI/UX 設計 <span class="co">· 醬子科技（App 行動應用開發）</span>',
+                   en:'Mobile UI/UX Design <span class="co">· Jiangzi Tech (mobile app development)</span>' },
+    'exp2.desc': { zh:'iOS / Android 介面與使用者體驗流程設計（驅動城市、新東陽、Gogoro、千山淨水…等）、Icon 設計與活動文宣海報。',
+                   en:'iOS / Android UI and UX-flow design (CityDrive, Hsin Tung Yang, Gogoro, Chanson Water and more), icon design and event posters.' },
+    'exp3.role': { zh:'設計主管 <span class="co">· 祥裕國際（手機配件）</span>',
+                   en:'Design Lead <span class="co">· Xiangyu Intl (phone accessories)</span>' },
+    'exp3.desc': { zh:'品牌視覺、包裝與授權手機殼設計（LINE、三麗鷗、SWAROVSKI）、櫥窗與商品攝影。',
+                   en:'Brand visuals, packaging and licensed phone-case design (LINE, Sanrio, SWAROVSKI), window displays and product photography.' },
+    'exp4.role': { zh:'平面設計 <span class="co">· 美麗樂國際、如果原創設計</span>',
+                   en:'Graphic Designer <span class="co">· Meilile Intl, Ruguo Design</span>' },
+    'exp4.desc': { zh:'平面、包裝與視覺設計。', en:'Graphic, packaging and visual design.' },
+    'more':   { zh:'完整經歷與條列成果請見 <a href="resume.pdf" target="_blank" rel="noopener" download="蔡適遠Yuan_2026履歷.pdf">下載履歷 <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>',
+                en:'Full experience and detailed results are in <a href="resume.pdf" target="_blank" rel="noopener" download="蔡適遠Yuan_2026履歷.pdf">my CV <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>' },
+    'edu.1':  { zh:'臺北科技大學　互動設計系（碩士）', en:'National Taipei University of Technology: Interaction Design (M.A.)' },
+    'edu.2':  { zh:'萬能科技大學　商業設計系（學士）', en:'Vanung University: Commercial Design (B.A.)' },
+    'edu.3':  { zh:'復興商工　美工科', en:'Fu-Hsin Trade & Arts School: Fine Arts' },
+    'brands': { zh:'一起做過的品牌：<b>PRO360達人網 · 新東陽 · Gogoro · 驅動城市 · 千山淨水</b>',
+                en:'Brands: <b>PRO360 · Hsin Tung Yang · Gogoro · CityDrive · Chanson Water</b>' },
+
+    'contact.h2':   { zh:'想聊聊嗎？', en:'Want to chat?' },
+    'contact.p':    { zh:'不管是工作機會還是專案合作，都歡迎找我。', en:'Whether it\'s a job opportunity or a project, feel free to reach out.' },
+    'link.email':   { zh:'Email', en:'Email' },
+    'link.portfolio':{ zh:'作品平台', en:'Portfolio' },
+    'link.connect': { zh:'職業檔案', en:'Connect' },
+    'link.cv':      { zh:'完整履歷', en:'Full CV' },
+    'link.cvv':     { zh:'下載 PDF', en:'Download PDF' },
+    'footer':       { zh:'© 2026 蔡適遠 Yuan · UI/UX・產品設計師作品集', en:'© 2026 Yuan Tsai · UI/UX & Product Designer Portfolio' },
+
+    /* --- 作品內頁（JS 生成用） --- */
+    'd.back':   { zh:'回作品列表', en:'Back to works' },
+    'd.next':   { zh:'下一件作品', en:'Next project' },
+    'card.soon': { zh:'作品整理中', en:'Coming soon' },
+    'd.liveT':   { zh:'線上試用', en:'Try it live' },
+    'd.liveBtn': { zh:'打開 App', en:'Open the app' },
+    'd.kv':     { zh:'主視覺（佔位）', en:'Key visual (placeholder)' },
+    'd.light.h':{ zh:'成果畫面', en:'Final screens' },
+    'd.light.d':{ zh:'輕案例：放一排連續成果圖展現廣度，省略編號分段。', en:'A quick look: a row of result images to show breadth, without numbered sections.' },
+    'd.res':    { zh:'成果圖', en:'Result' },
+    'd.opt1t':{ zh:'背景', en:'Background' }, 'd.opt1d':{ zh:'<p>原本長怎樣、有什麼問題（數據或使用者回饋）。</p>', en:'<p>What it looked like and the problem (data or user feedback).</p>' },
+    'd.opt2t':{ zh:'洞察', en:'Insight' }, 'd.opt2d':{ zh:'<p>發現的關鍵點。</p>', en:'<p>The key thing I found.</p>' },
+    'd.opt3t':{ zh:'設計', en:'Design' }, 'd.opt3d':{ zh:'<p>改了什麼。</p>', en:'<p>What changed.</p>' },
+    'd.beforeD':{ zh:'原本的畫面 / 問題（佔位）', en:'The original screen / problem (placeholder)' },
+    'd.afterD': { zh:'優化後的畫面 / 解法（佔位）', en:'The improved screen / solution (placeholder)' },
+    'd.opt4t':{ zh:'成果', en:'Result' }, 'd.opt4d':{ zh:'<p>數據變化：轉換率、完成率、留存…（佔位）。</p>', en:'<p>Metric changes: conversion, completion, retention… (placeholder).</p>' },
+
+    /* --- 登入流程優化（pro360）專屬內容 --- */
+    'd.pro360.opt1t': { zh:'背景', en:'Background' },
+    'd.pro360.opt1d': { zh:'<p>舊版登入頁累積了多年的功能疊加：社群、Email、手機號碼多種登入方式並存，登入與註冊分屬不同入口，錯誤與過期狀態各自岔出獨立流程。使用者在進門的第一步就要先做一連串判斷，「我註冊過嗎？」「上次是用哪個方式？」認知負擔全落在使用者身上。</p>',
+                         en:'<p>Years of feature accumulation had left the login page tangled: social, email, and phone login coexisted, sign-in and sign-up lived at separate entrances, and error or expiry states each branched into their own flows. Users faced a series of decisions at the very front door, "Did I register before?" "Which method did I use last time?", with the entire cognitive load on their shoulders.</p>' },
+    'd.pro360.opt2t': { zh:'洞察', en:'Insight' },
+    'd.pro360.opt2d': { zh:'<p>團隊討論後，由我整理並確立重構目標：以最低認知負擔為原則，讓使用者不管想用哪種方式，都能無痛登入。這個原則轉譯成四個具體的設計決策：</p><p>使用者不需要分辨「登入」還是「註冊」，輸入之後，系統在背景判斷帳號是否存在，自動走向對應流程；每一種登入方式都只有一條主線，移除「是否已註冊」這類顯性分岔節點，社群與手機登入完成即成功，Email 流程合併登入與註冊入口；錯誤與失效不再是流程分支，過期、驗證失敗等狀態改為就地提示，使用者留在原地修正，而不是被丟進另一條流程；所有成功結果只導向同一個「已登入首頁」。</p><p>一句話總結：把判斷的工作從使用者搬到系統身上。</p>',
+                         en:'<p>Following team discussions, I consolidated and defined the redesign goal: minimum cognitive load, whoever you are, however you want to log in, it should just work. That principle translated into four concrete decisions:</p><p>Users never need to distinguish "log in" from "sign up", the system checks account existence in the background and routes accordingly. Every login method has exactly one main path: explicit "already registered?" branches were removed; social and phone logins succeed directly; the email flow merges sign-in and sign-up. Errors and expiry are no longer flow branches, they became inline states, letting users fix issues in place instead of being rerouted. All successful paths converge on a single "logged-in home."</p><p>In one sentence: move the burden of judgment from the user to the system.</p>' },
+    'd.pro360.opt3t': { zh:'Before / After', en:'Before / After' },
+    'd.pro360.beforeD': { zh:'多入口、多分岔、錯誤即斷點，使用者要自己找路。',
+                           en:'Multiple entrances, multiple branches, errors as dead ends, users had to find their own way.' },
+    'd.pro360.afterD': { zh:'三種登入方式各一條直線，帳號狀態由系統背景判斷，錯誤就地修正，全部殊途同歸到同一個已登入首頁。',
+                          en:'Three login methods, each a straight line; account states judged silently by the system; errors fixed in place; every path converging on the same logged-in state.' },
+    'd.pro360.opt3note': { zh:'<p>從確立原則到完成，由我獨立繪製全部畫面並完成流程串接，涵蓋社群、Email、手機三條登入線，以及驗證碼、重設密碼、連結失效等所有邊界狀態。</p>',
+                           en:'<p>From principle to completion, I independently designed all screens and mapped the full flow, covering social, email, and phone login lines, plus every edge state: OTP verification, password reset, and expired links.</p>' },
+    'd.pro360.flowimg': { zh:'新版流程圖＋畫面串接圖（佔位）', en:'New flow diagram + screen mapping (placeholder)' },
+    'd.pro360.flowcap': { zh:'新版登入／註冊完整流程圖，涵蓋社群、Email、手機三條登入線與所有邊界狀態', en:'Full login / sign-up flow diagram, covering the social, email, and phone login lines and every edge state' },
+    'd.pro360.opt4t': { zh:'成果與後記', en:'Results & Reflections' },
+    'd.pro360.opt4d': { zh:'<p>新版登入已於 2026 年上線。這次重構對我最大的驗證是：登入這種「看似最基本」的流程，反而最容易在長期迭代中長出複雜度，解法不是增加說明，而是把判斷移回系統端。流程圖在專案中同時成為與工程溝通的共同基準，讓所有邊界狀態在開發前就被定義清楚。</p>',
+                         en:'<p>The new login launched in 2026. The biggest lesson this redesign confirmed: the most "basic-looking" flows are exactly where complexity quietly accumulates over years of iteration, and the fix isn\'t more instructions, it\'s moving judgment back to the system side. The flow diagram also became the shared reference with engineering, defining every edge state before development began.</p>' },
+    /* --- 新東陽 會員送禮 App（功能巡覽版） --- */
+    'd.xdy.kv':        { zh:'會員送禮 App 主視覺（佔位）', en:'Member Gift App key visual (placeholder)' },
+    'd.xdy.mainfunc':  { zh:'主要功能', en:'Main Function' },
+    'd.xdy.maincolor': { zh:'主色系', en:'Main Colors' },
+    'd.xdy.colordesc': { zh:'以企業標準色為主要設計配色，營造溫暖、放心的感受。', en:'Built around the brand\'s corporate colors for a warm, reassuring feel.' },
+    'd.xdy.feat1t':{ zh:'首頁', en:'Homepage' },
+    'd.xdy.feat1d':{ zh:'以企業識別視覺為底，側邊選單收納次要功能，讓人快速方便地瀏覽內容。', en:'Built on the brand\'s visual identity, with secondary functions tucked into a side menu for quick, easy browsing.' },
+    'd.xdy.feat2t':{ zh:'會員專區', en:'Member' },
+    'd.xdy.feat2d':{ zh:'記錄會員基本資料，下單時免重複填寫；並加入紅利點數機制，點數可兌換商品或折抵，提升 App 黏著度。', en:'Stores members\' basic details so they skip re-entering them at checkout, plus a bonus-point system redeemable for products or discounts, boosting app stickiness.' },
+    'd.xdy.feat3t':{ zh:'送禮專家', en:'Gift' },
+    'd.xdy.feat3d':{ zh:'商品以清楚的分類、價格與特色呈現，讓使用者更快、更準地挑到想送的禮。', en:'Products shown by clear categories, prices, and features, helping users pick the right gift quickly and accurately.' },
+    'd.xdy.feat4t':{ zh:'門市據點', en:'Shop' },
+    'd.xdy.feat4d':{ zh:'用搜尋快速找到鄰近門市，並在地圖上直接定位正確店家位置。', en:'Search to find nearby stores fast and pinpoint the exact location on the map.' },
+    'd.xdy.feat5t':{ zh:'好康優惠', en:'Discount' },
+    'd.xdy.feat5d':{ zh:'透過抽獎小遊戲取得各項折扣，讓使用者在互動中拿到優惠。', en:'Earn various discounts through a lucky-draw mini game, turning savings into a bit of play.' },
+
+    /* --- 千山淨水 健康喝水 App（功能巡覽版） --- */
+    'd.water.kv':        { zh:'健康喝水 App 主視覺（佔位）', en:'Health App key visual (placeholder)' },
+    'd.water.mainfunc':  { zh:'主要功能', en:'Main Function' },
+    'd.water.maincolor': { zh:'主色系', en:'Main Colors' },
+    'd.water.colordesc': { zh:'以水與健康為主要設計配色，帶來簡單、有活力的感受。', en:'Built around water and health as the core palette, for a simple, energetic feel.' },
+    'd.water.feat1t':{ zh:'首頁', en:'Homepage' },
+    'd.water.feat1d':{ zh:'顯示當日喝水完成度與飲水量，透過進度條掌握狀況；側邊選單可快速切換不同帳號。', en:'Shows the day\'s hydration progress and water intake at a glance via a progress ring, with a side menu for quickly switching between accounts.' },
+    'd.water.feat2t':{ zh:'分析', en:'Analysis' },
+    'd.water.feat2d':{ zh:'分析飲水狀態，水量不足時自動提醒；記錄喝水次數與人數，可依需求切換檢視。', en:'Analyzes hydration status and reminds you when intake is low, tracking how often and how many people drink, with views you can switch as needed.' },
+    'd.water.feat3t':{ zh:'好友', en:'Friend' },
+    'd.water.feat3d':{ zh:'好友系統可督促朋友喝水，透過提醒增添樂趣，雙方都能健康地互相監督飲水量；愛心圖示會在互相提醒時出現。', en:'The friend system lets you nudge friends to drink up, adding fun through reminders so both sides keep each other healthily on track. A heart icon appears when friends remind each other.' },
+    'd.water.feat4t':{ zh:'設定', en:'Setting' },
+    'd.water.feat4d':{ zh:'管理個人資料與各項裝置設定，可依需求調整基本資訊與每日飲水量。', en:'Manage personal information and device settings, adjusting basic details and your daily water target as needed.' },
+
+    /* --- PRO360 尋找服務 App（消費者端・功能巡覽版） --- */
+    'd.consumer.kv':        { zh:'尋找服務 App 主視覺（佔位）', en:'Consumer App key visual (placeholder)' },
+    'd.consumer.mainfunc':  { zh:'主要功能', en:'Main Function' },
+    'd.consumer.maincolor': { zh:'主色系', en:'Main Colors' },
+    'd.consumer.colordesc': { zh:'以企業標準色為主要設計配色，帶來真誠、有活力的感受。', en:'Built around the brand\'s corporate colors for a genuine, energetic feel.' },
+    'd.consumer.feat1t':{ zh:'找服務', en:'Search' },
+    'd.consumer.feat1d':{ zh:'在首頁瀏覽服務並提出需求，針對有提供的服務瀏覽相關專家，用篩選功能找到更多合適的專家；也能透過需求問卷讓專家更清楚你的需求，進一步媒合。', en:'Browse services and post a need right from the homepage, explore relevant experts for a given service, and use filters to find more suitable ones. A needs questionnaire also helps experts understand exactly what you want, for a closer match.' },
+    'd.consumer.feat2t':{ zh:'需求', en:'Request' },
+    'd.consumer.feat2d':{ zh:'提出一個需求後，可以收到多位專家的聯繫與報價，在這裡挑選合適的專家進一步聯繫；若暫時沒有合適的，也能再次刊登需求，等待更適合的專家主動接洽。', en:'Once you post a need, you receive quotes and messages from several experts and can pick the right ones to follow up with here. If none fit yet, re-post the need and wait for a better-matched expert to reach out.' },
+    'd.consumer.feat3t':{ zh:'訊息', en:'Message' },
+    'd.consumer.feat3d':{ zh:'用聊天室直接與專家聯繫，查看專家的服務與預約資訊，達成合作後也能給予評價；累積的好評能提升專家在平台上的優勢。', en:'Use the built-in chat to talk with experts directly, check their services and booking details, and leave a review once you\'ve worked together. Accumulated positive reviews strengthen an expert\'s standing on the platform.' },
+    'd.consumer.feat4t':{ zh:'設定', en:'Setting' },
+    'd.consumer.feat4d':{ zh:'管理個人資料與各項裝置設定，可修改密碼、調整通知顯示，方便掌握專家傳來的訊息通知。', en:'Manage personal information and device settings, change your password, and adjust notification display so you never miss a message from an expert.' },
+    'd.consumer.extra1t':{ zh:'錯誤與空頁面', en:'Error & Empty States' },
+    'd.consumer.extra1d':{ zh:'當內容不存在或發生錯誤時，畫面提供明確的引導與出口，讓使用者清楚知道目前狀態，並能順利回到正常流程。', en:'When content is missing or something goes wrong, the screens give clear guidance and a way out, so users always understand the current state and can get back on track.' },
+
+    'd.deep1t':{ zh:'需求 / 目的', en:'Goal' }, 'd.deep1d':{ zh:'這是什麼、為誰做、要達成什麼。', en:'What it is, who it\'s for, and what it should achieve.' },
+    'd.deep2t':{ zh:'流程 Flow', en:'Flow' }, 'd.deep2d':{ zh:'使用者怎麼走完整個流程。', en:'How the user moves through the whole flow.' },
+    'd.flowimg':{ zh:'流程圖（佔位）', en:'Flow chart (placeholder)' },
+    'd.deep3t':{ zh:'問題 / 解決', en:'Problem / Solution' },
+    'd.probT':{ zh:'問題', en:'Problem' }, 'd.probD':{ zh:'使用者可能遇到的問題（佔位）', en:'A problem users might hit (placeholder)' },
+    'd.solT':{ zh:'解法', en:'Solution' }, 'd.solD':{ zh:'設計如何解決（佔位）', en:'How the design solves it (placeholder)' },
+    'd.deep4t':{ zh:'介面 UI', en:'UI' }, 'd.deep4d':{ zh:'最終畫面。', en:'The final screens.' },
+    'd.resultimg':{ zh:'成果畫面（佔位）', en:'Final screen (placeholder)' },
+    'd.deep5t':{ zh:'後記', en:'Reflection' }, 'd.deep5d':{ zh:'反思、學到什麼。', en:'Reflections and what I learned.' },
+    'd.future': { zh:'專家版功能，已上線，案例文章尚待補充', en:'Provider-side feature, already live; full case write-up still in progress' },
+    'd.build1t':{ zh:'真實需求', en:'Real need' }, 'd.build1d':{ zh:'自己旅日購物時想追蹤花費與預算，市面上找不到合用的工具，於是決定動手做。', en:'While shopping in Japan I wanted to track spending and budget, but no existing tool fit, so I decided to build one.' },
+    'd.build2t':{ zh:'定義 MVP', en:'Defining the MVP' }, 'd.build2d':{ zh:'鎖定最小可用範圍：記錄品項、金額、匯率換算與總覽，砍掉一切非核心功能。', en:'Scoped the smallest useful version: log items, amounts, currency conversion and an overview, cutting everything non-essential.' },
+    'd.build3t':{ zh:'工具鏈', en:'Toolchain' }, 'd.build3d':{ zh:'Figma 設計介面 → Claude Code 實作 → GitHub Pages 部署，一條龍從設計到上線。', en:'Figma for the UI → Claude Code to build → GitHub Pages to deploy: end-to-end from design to live.' },
+    'd.build4t':{ zh:'上線', en:'Shipping' }, 'd.build4d':{ zh:'幾天內做出可實際使用、手機可開的版本，真的帶著它去旅行使用。', en:'Shipped a real, mobile-ready version within days, and actually used it on the trip.' },
+    'd.build5t':{ zh:'迭代', en:'Iteration' }, 'd.build5d':{ zh:'依實際使用回饋持續調整分類、匯率與體驗細節，驗證想法再優化。', en:'Iterated from real usage, refining categories, exchange rates and UX details, validating then improving.' },
+
+    // 日本購物消費追蹤 App（深案例版型・專屬內容，覆寫共用 d.deep* 佔位文字）
+    'd.shop.kv':      { zh:'旅買記 App 主畫面（佔位）', en:'App home screen (placeholder)' },
+    'd.shop.liveName':{ zh:'旅買記', en:'Japan Shopping Tracker' },
+    'd.shop.liveNote':{ zh:'手機開啟就能直接記錄，不用註冊，資料只存在你自己的瀏覽器。', en:'Open it on your phone and start logging. No sign-up, and the data stays in your own browser.' },
+    'd.shop.mvp1cap': { zh:'新增商品：單手就能填完，價格一輸入就即時換算台幣。', en:'Add an item: one-handed input, with the TWD conversion updating as you type.' },
+    'd.shop.mvp2cap': { zh:'商品詳細：記下店家與備註，事後比價、對收據都靠這頁。', en:'Item detail: store and notes recorded here, for comparing prices and matching receipts later.' },
+    'd.shop.iter1cap':{ zh:'多旅程：每趟獨立記錄與合計，工具從一次性變成能長期用。', en:'Multiple trips: each trip tracked and totalled separately, turning a one-off tool into something reusable.' },
+    'd.shop.iter2cap':{ zh:'設定頁：使用者在這裡挑選外觀配色。', en:'Settings: where users pick the app’s color theme.' },
+    'd.shop.stripcap':{ zh:'六種配色主題套用在同一個畫面上的實際效果，白字對比全數通過 WCAG AA。', en:'The six themes applied to the same screen. White text passes WCAG AA contrast in all of them.' },
+    'd.shop.th1':{ zh:'赤陶玫瑰', en:'Terracotta' },
+    'd.shop.th2':{ zh:'玫瑰紅',   en:'Rose' },
+    'd.shop.th3':{ zh:'薰衣草紫', en:'Lavender' },
+    'd.shop.th4':{ zh:'靛藍',     en:'Indigo' },
+    'd.shop.th5':{ zh:'墨綠',     en:'Teal' },
+    'd.shop.th6':{ zh:'石墨灰',   en:'Graphite' },
+    'd.shop.deep1t':  { zh:'真實需求', en:'Real need' },
+    'd.shop.deep1d':  { zh:'準備日本旅遊時，想追蹤每筆購物花費與台幣預算，卻遇到幾個具體的麻煩：拍了商品照，事後卻想不起價格；每一筆都得自己心算日幣換台幣；收據一堆，對不上到底是哪個東西買的。市面工具不是太複雜要綁帳戶，就是介面不順手，於是決定自己做一個只服務這趟旅程的小工具。',
+                         en:'Preparing for a trip to Japan, I wanted to track spending against a TWD budget, but ran into a few concrete headaches: I\'d photograph a product yet later couldn\'t recall its price; every purchase meant doing the yen-to-TWD math in my head; and a pile of receipts never matched up to what each item actually was. Existing apps were either overbuilt with account syncing or just clunky on the go, so I built a small tool made only for this trip.' },
+    'd.shop.deep2t':  { zh:'嘗試與取捨', en:'Attempts & tradeoffs' },
+    'd.shop.deep2d':  { zh:'第一版原本想做「拍照自動判讀品名與價格」，也對部分功能做了初步實測，但持續失敗。追查後發現問題出在架構，而不是辨識本身：呼叫 AI 需要 API 金鑰，金鑰不能放前端，否則會被盜用；安全的做法得架一台後端代理伺服器，這和「純前端單檔」的架構本質衝突。當時有三個選項（架後端代理、把金鑰硬放前端、改回手動輸入），以「幾個人、短期旅遊」的情境衡量，最後選了第三個：立刻可用、零設定、零維護、零風險。<br><br>配色也是一輪取捨：鮮豔正紅有活力但對比不足，收斂成更耐看的赤陶色，並把 emoji 全換成統一線條圖示。',
+                         en:'The first version aimed to auto-read item names and prices from photos, and I ran early tests on part of it, but they kept failing. Tracing it down, the problem was the architecture, not the recognition itself: calling an AI needs an API key, the key can\'t sit on the front end or it gets stolen, and the secure approach requires a backend proxy server, which fundamentally conflicts with a pure front-end, single-file architecture. There were three options at that point (build a backend proxy, hardcode the key on the front end, or switch back to manual entry); weighing it for a few people on a short trip, I chose the third: instantly usable, zero setup, zero maintenance, zero risk.<br><br>Color went through its own trade-off too: a vivid red felt lively but tested poorly on contrast, so I settled on a calmer terracotta and swapped every emoji for consistent line icons.' },
+    'd.shop.flowimg': { zh:'配色與圖示迭代前後（佔位）', en:'Color & icon iteration, before/after (placeholder)' },
+    'd.shop.deep3t':  { zh:'第一版範圍（MVP）', en:'MVP Scope' },
+    'd.shop.deep3d':  { zh:'<p>快速手動輸入＋照片附件＋日幣→台幣即時換算＋localStorage 離線儲存。行動優先設計，因為使用場景就是站在店裡單手操作。</p><p>匯率的處理是一個小巧思：每次開啟 App 時透過免費公開 API（open.er-api.com，無需金鑰，因此沒有前端安全問題）抓取最新匯率並存在本機；若當下沒有網路，就自動沿用上次成功取得的匯率，數字可能略舊，但換算功能永遠可用，不會因斷線而整個失效。核心原則一致：在網路不可靠的旅途中，「永遠能用」優先於「永遠最新」。</p><p>照片附件則透過 Canvas 在瀏覽器端縮圖壓縮後才存入 localStorage，在有限的本機容量內讓影像記錄成為可行的功能，同樣不依賴任何伺服器。</p>',
+                         en:'<p>Fast manual entry + photo attachments + real-time JPY→TWD conversion + localStorage offline storage. Mobile-first, designed for one-handed use while standing in a store.</p><p>The exchange rate handling includes a deliberate design detail: on each launch, the app fetches the latest rate via a free public API (open.er-api.com, no key required, so none of the front-end security issues) and caches it locally. When offline, it gracefully falls back to the last successfully fetched rate, the number may be slightly stale, but conversion always works instead of breaking entirely. Same core principle throughout: on a trip where connectivity is unreliable, "always works" beats "always current."</p><p>Photo attachments are resized and compressed in-browser via Canvas before being stored in localStorage, making image records feasible within the local storage limit, again with zero server dependency.</p>' },
+    'd.shop.deep4t':  { zh:'工具鏈', en:'Toolchain' },
+    'd.shop.deep4d':  { zh:'Figma 沒特別介入，直接用文字需求對齊，由 Claude Code 產出並迭代前端（純 HTML/CSS/JS，無框架、無後端），資料存在瀏覽器 localStorage；部署走 GitHub Pages，綁一個短網址，手機瀏覽器「加入主畫面」就能像真的 App 一樣使用。',
+                         en:'Figma wasn\'t really in the loop this time. I aligned on requirements in plain language and let Claude Code generate and iterate the front end directly (plain HTML/CSS/JS, no framework, no backend), with data kept in browser localStorage. Deployment ran through GitHub Pages with a short custom URL, then "Add to Home Screen" on mobile so it behaves like a real app.' },
+    'd.shop.resultimg':{ zh:'工具鏈示意（佔位）', en:'Toolchain diagram (placeholder)' },
+    'd.shop.deep5t':  { zh:'現況與迭代', en:'Current Status & Iterations' },
+    'd.shop.deep5d':  { zh:'<p>MVP 完成後持續迭代，目前已加入兩個功能：多旅程記錄，每次旅遊可建立獨立旅程，記錄不再混在一起，讓工具從「一次性」變成可長期重複使用的產品；六種配色主題，使用者可依喜好切換，這也是產品從「自己用」走向「給更多人用」的自然演進。</p><p>介面與使用體驗仍在優化中，計劃在下一次日本旅遊實地使用，以真實情境驗證流程，再依回饋迭代。</p><p>Roadmap：若未來開放更多人使用，將評估加上輕量後端（如 Cloudflare Workers）安全地代理 AI 呼叫，實現最初「拍照自動判讀」的理想解法。</p>',
+                        en:'<p>Iteration continued after the MVP, with two features added so far: multi-trip tracking, where each journey gets its own independent record, turning a one-off tool into a product built for repeated, long-term use; and six color themes for users to switch by preference, a natural step in the product\'s evolution from "built for myself" to "built for others."</p><p>UI and usability refinements are ongoing, with a field test planned for the next Japan trip to validate the flow in real conditions.</p><p>Roadmap: if opened up to more users, evaluate a lightweight backend (e.g., Cloudflare Workers) to securely proxy AI calls, finally realizing the original vision of photo-based auto-recognition.</p>' },
+
+    // Google Map 預訂（深案例版型・專屬內容，覆寫共用 d.deep* 佔位文字）
+    'd.gmap.kv':      { zh:'在 Google Map 提出預訂主畫面（佔位）', en:'Booking on Google Maps: key screen (placeholder)' },
+    'd.gmap.flowcap':    { zh:'消費者端完整使用者流程（Consumer User Flow）', en:'Full consumer-side user flow' },
+    'd.gmap.result1cap': { zh:'小螢幕版面：確認服務與預訂時間', en:'Compact mobile layout: confirm service and pick a time' },
+    'd.gmap.result2cap': { zh:'選擇預訂時間的三種呈現方式：快速選擇、月曆、週曆', en:'Three ways to pick a booking time: quick-pick, monthly calendar, weekly calendar' },
+    'd.gmap.result3cap': { zh:'預約詳情確認畫面的三種版面配置', en:'Three layout variations for confirming booking details' },
+    'd.gmap.futurecap':  { zh:'專家端在 Google 預訂頁面設定服務與檔案的介面', en:'Provider-side interface for setting up services and profile on the Google-booking page' },
+    'd.gmap.deep1t':  { zh:'需求與目標', en:'Goal' },
+    'd.gmap.deep1d':  { zh:'大量使用者習慣在 Google Map 上尋找店家與服務。這個專案讓他們不必離開熟悉的路徑，就能透過 Google 預訂直接向平台提出需求，為平台開啟一條新的流量入口。參考 Google Map、Airbnb、inline、OpenTable 的預訂模式，設計符合平台雙邊媒合特性的流程。',
+                         en:'A large share of users naturally search for services on Google Maps. This project let them submit booking requests to the platform without leaving that familiar path, opening a new traffic channel. Booking patterns from Google Maps, Airbnb, inline, and OpenTable were studied and adapted to the platform\'s two-sided marketplace model.' },
+    'd.gmap.deep2t':  { zh:'流程先行：一次流程方法的導入', en:'Flow First: Introducing a Process Change' },
+    'd.gmap.deep2d':  { zh:'這個專案我做了一個方法上的改變：在動手畫介面前，先完整建立 User Flow。過去團隊缺少 Flow 的支持，常在開發完成後才冒出未考慮的情境，造成延期或功能不完整。這次先把問題定義完整再往下執行，讓後續開發明顯順暢。<br><br>表面上流程很單純：找到店家 → 選服務 → 選時間 → 填資料 → 送出。但 Flow 攤開後，真正的複雜度浮現：舊會員的 Email 該怎麼處理？使用者關閉預訂後會去哪裡？送出後如何聯繫專家、管理需求？',
+                         en:'I made a methodological change on this project: building a complete user flow before any interface work. Previously, without flow support, unconsidered scenarios surfaced only after development was done, causing delays and incomplete features. This time, problems were fully defined upfront, and development ran noticeably smoother.<br><br>On the surface the flow is simple: find a provider → pick a service → choose a time → fill in details → submit. But mapping it out revealed the real complexity: how to handle emails of existing members? Where do users land after closing the booking? How do they contact the provider and manage requests after submitting?' },
+    'd.gmap.flowimg': { zh:'User Flow 圖（佔位）', en:'User flow diagram (placeholder)' },
+    'd.gmap.deep3t':  { zh:'關鍵限制與解法', en:'Key Constraint & Solutions' },
+    'd.gmap.probT':   { zh:'限制', en:'Constraint' },
+    'd.gmap.probD':   { zh:'最大的挑戰是跨生態系的硬限制：使用者從 Google Map 進入平台後，無法返回 Google Map。',
+                         en:'The core challenge was a hard cross-ecosystem constraint: once users enter the platform from Google Maps, there\'s no way back.' },
+    'd.gmap.solT':    { zh:'解法', en:'Solutions' },
+    'd.gmap.solD':    { zh:'輸入 Email 若已是平台帳號，需登入驗證後才能使用，且登入後鎖定不可更改，避免帳號混用；使用者關閉預訂畫面時，停留在專家頁面而不是死路，讓他能重新提出需求或探索其他服務；送出需求後直接引導至預訂詳情，內含與專家的聊天室及時間修改、關閉需求等管理功能，把「送出後的失聯焦慮」在動線上直接解掉。',
+                         en:'If the entered email belongs to an existing account, login verification is required, and the email is locked afterward to prevent account mix-ups. Closing the booking view keeps users on the provider\'s page, never a dead end, so they can rebook or explore other services. After submitting, users are guided straight to the booking detail page, with built-in chat, time changes, and request management, resolving the "post-submit anxiety" directly in the flow.' },
+    'd.gmap.deep4t':  { zh:'介面：為最小的螢幕多做一步', en:'Interface: Going One Step Further for the Smallest Screens' },
+    'd.gmap.deep4d':  { zh:'Wireframe 驗證互動與所有狀態後進入介面。幾個具體的體驗決策：小尺寸手機（320px）在時間選擇會發生文字截斷，因此為小螢幕另做一套介面版型，而不是硬塞同一套；用 icon 與間距重整預訂資料的呈現，提升可讀性；為避免頁面冗長，資料填寫欄位在完成時間選擇後才出現，把長流程切成可消化的段落；預訂管理除了送出後自動進入，也能從導航列隨時回訪。',
+                         en:'After validating interactions and states in wireframes, several deliberate UX decisions shaped the interface: small devices (320px) suffered text truncation in time selection, so a separate layout variant was designed for small screens rather than forcing one size on all; icons and spacing restructured the booking summary for readability; form fields appear only after time selection, breaking a long flow into digestible steps; booking management is reachable both automatically after submission and anytime via the navigation bar.' },
+    'd.gmap.resultimg':{ zh:'介面成果畫面（佔位）', en:'Final interface screens (placeholder)' },
+    'd.gmap.deep5t':  { zh:'成果與後記', en:'Results & Reflections' },
+    'd.gmap.deep5d':  { zh:'功能於 2025 年上線。在幾乎沒有額外行銷推廣的情況下，上線當天即有超過 10 組專家給予正向評價，20 天內累積 60+ 組專家實際使用並成功成單、25+ 組專家好評，採用與成單來自流程與體驗本身，而非行銷資源的堆疊。<br><br>從規劃到交付工程師歷時數個月，過程中在 Flow 與 Wireframe 之間多次往返修正，介面迭代了多個版本。這個專案讓我確立了「流程先行」的工作方法，看似簡單的預訂流程，攤開後全是細節；先把問題想完整，比事後補洞便宜得多。',
+                         en:'Launched in 2025. With minimal marketing push, 10+ providers gave positive feedback on launch day; within 20 days, 60+ providers had actively used the feature and closed deals, with 25+ positive reviews. Adoption was driven by the flow and experience itself, not marketing spend.<br><br>The project spanned several months from planning to engineering handoff, with multiple rounds between flow and wireframe and many interface iterations. It cemented my "flow-first" working method: a seemingly simple booking flow unfolds into countless details, and defining problems upfront is far cheaper than patching them later.' },
+  };
+
+  function T(key){ const d = DICT[key]; return d ? d[LANG] : key; }
+  // 深案例可能有多件作品共用同一版型（spec:'deep'），內容不能都寫在共用的 d.deep* 鍵上，
+  // 否則會互相覆蓋。TD 會優先找「d.<work id>.<key>」的專屬內容，沒有才退回共用的 d.<key> 佔位文字。
+  function TD(w, key){ const idKey = 'd.'+w.id+'.'+key; return DICT[idKey] ? DICT[idKey][LANG] : T('d.'+key); }
+  function L(w, field){ return (LANG === 'en' && w[field+'En'] != null) ? w[field+'En'] : w[field]; }
+  function catLabel(cat){ return LANG === 'en' ? CAT[cat].labelEn : CAT[cat].label; }
+  function imgLabel(n){ return LANG === 'en' ? ('Image ' + n) : ('圖 ' + n); }
+
+  function applyLang(){
+    document.documentElement.lang = (LANG === 'en') ? 'en' : 'zh-Hant';
+    document.querySelectorAll('[data-i18n]').forEach(el => { const d = DICT[el.dataset.i18n]; if (d) el.textContent = d[LANG]; });
+    document.querySelectorAll('[data-i18n-html]').forEach(el => { const d = DICT[el.dataset.i18nHtml]; if (d) el.innerHTML = d[LANG]; });
+    document.getElementById('langBtn').textContent = (LANG === 'en') ? '中' : 'EN';
+    syncFilters();
+    renderGallery(currentCat);
+    if (document.getElementById('view-detail').classList.contains('active') && currentDetail) openDetail(currentDetail, true);
+  }
+  function toggleLang(){ LANG = (LANG === 'en') ? 'zh' : 'en'; localStorage.setItem('lang', LANG); applyLang(); }
+
+  /* ---------- 畫廊 ---------- */
+  // 兩種暫代狀態：
+  //   draft:true — 完全不對外顯示（畫廊、分類膠囊、下一件作品都跳過）
+  //   soon:true  — 只影響卡片外觀（顯示「作品整理中」而不是純色空塊），內頁照常可以點進去看
+  const LIVE = () => WORKS.filter(w => !w.draft);
+
+  // 整個分類都沒有可顯示的作品時，連膠囊一起收掉，免得點進去是空的
+  function syncFilters(){
+    document.querySelectorAll('#filters .pill').forEach(p => {
+      const cat = p.dataset.cat;
+      const has = cat === 'all' || LIVE().some(w => w.cat === cat);
+      p.style.display = has ? '' : 'none';
+    });
+  }
+
+  function renderGallery(cat='all') {
+    currentCat = cat;
+    const g = document.getElementById('gallery');
+    const list = LIVE().filter(w => cat==='all' || w.cat===cat);
+    document.getElementById('empty').style.display = list.length ? 'none' : 'block';
+    g.innerHTML = list.map(w => `
+      <article class="card${w.soon ? ' soon' : ''}" onclick="openDetail('${w.id}')">
+        <div class="card-media">
+          ${w.soon
+            ? `<div class="soon-box" style="--ph:${CAT[w.cat].color}">${icon('image-plus')}<span>${T('card.soon')}</span></div>`
+            : (w.cardImg || w.heroImg)
+              ? media(w.cardImg || w.heroImg, L(w,'title'))
+              : `<div class="ph" style="--ph:${CAT[w.cat].color};aspect-ratio:${w.ratio || '1/1'}">${L(w,'title')}</div>`}
+        </div>
+        <div class="card-head">
+          <div>
+            <div class="card-title">${L(w,'title')}</div>
+            <div class="card-cat">${catLabel(w.cat)}</div>
+          </div>
+          <div class="arrow" onclick="event.stopPropagation();openDetail('${w.id}')">${icon('arrow-right')}</div>
+        </div>
+      </article>`).join('');
+  }
+
+  function filter(cat, el) {
+    document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    renderGallery(cat);
+  }
+
+  /* ---------- 內頁 ---------- */
+  function openDetail(id, keepScroll) {
+    const i = WORKS.findIndex(w => w.id===id);
+    const w = WORKS[i];
+    if (!w || w.draft) return;   // 未公開的作品沒有內頁可看（soon 只是外觀，照樣能進去）
+    currentDetail = id;
+    const live = LIVE();
+    const li = live.findIndex(x => x.id === w.id);
+    const next = live[(li + 1) % live.length] || live[0];
+    const c = CAT[w.cat];
+
+    let body = '';
+    if (w.spec === 'gallery') {
+      // 圖牆：瀑布流 + 點圖放大（lightbox）
+      // 只要開始放真圖，佔位方塊就整批退場：有幾張真圖就顯示幾張，不必去清空 shots 裡剩下的佔位
+      const all = w.shots || [];
+      const real = all.filter(s => s.src);
+      const shots = real.length ? real : all;
+      LB.list = shots; LB.color = c.color;  // 給 lightbox 用
+      body = `
+        <div class="shot-gallery">
+          ${shots.map((s, idx) => `
+            <figure class="shot-item" onclick="openLightbox(${idx})">
+              ${ s.src
+                  ? media(s.src, `${L(w,'title')} ${idx+1}`)
+                  : `<div class="ph ${s.h}" style="--ph:${c.color}">${imgLabel(idx+1)}</div>` }
+              <span class="zoom">${icon('expand')}</span>
+            </figure>`).join('')}
+        </div>`;
+    } else if (w.spec === 'light') {
+      // 輕案例：標題 → 簡介 → 一排成果圖
+      body = `
+        <div class="hero-shot"><div class="ph h1x" style="--ph:${c.color}">${T('d.kv')}</div></div>
+        <div class="step"><div class="no">·</div><div>
+          <h3>${T('d.light.h')}</h3><p>${T('d.light.d')}</p>
+          ${shot(`<div class="ph h1x" style="--ph:${c.color}">${T('d.res')} 1</div>`)}
+          ${shot(`<div class="ph h3x" style="--ph:${c.color}">${T('d.res')} 2</div>`, null, 'margin-top:12px;')}
+        </div></div>`;
+    } else if (w.spec === 'features') {
+      // 功能巡覽：主要功能 icon 排 → 主色系色票 → 五大功能各自說明＋截圖
+      const feats = w.features || [];
+      // 橫式流程圖需要滿欄寬才看得清；直式手機截圖維持 320px 上限
+      const featCap = w.featWide ? '' : 'max-width:320px';
+      const featShot = (f, i) => f.img
+        ? (Array.isArray(f.img)
+            ? f.img.map(src => shot(`<img src="${src}" alt="${L(w,'title')}">`, null, featCap)).join('')
+            : shot(`<img src="${f.img}" alt="${L(w,'title')}">`, null, featCap))
+        : shot(`<div class="ph h2x" style="--ph:${c.color}">${TD(w,'feat'+(i+1)+'t')}</div>`, null, 'max-width:320px');
+      body = `
+        <div class="hero-shot">${w.heroImg ? `<img src="${w.heroImg}" alt="${L(w,'title')}">` : `<div class="ph h1x" style="--ph:${c.color}">${TD(w,'kv')}</div>`}</div>
+        <div class="feature-overview">
+          <div class="feat-h">${TD(w,'mainfunc')}</div>
+          <div class="feat-icons">
+            ${feats.map((f,i) => `<div class="feat-icon"><span class="fi-ico">${icon(f.icon)}</span><span>${TD(w,'feat'+(i+1)+'t')}</span></div>`).join('')}
+          </div>
+        </div>
+        <div class="color-section">
+          <div class="feat-h">${TD(w,'maincolor')}</div>
+          <p>${TD(w,'colordesc')}</p>
+          <div class="palette">
+            ${(w.colors||[]).map(hex => `<div class="swatch"><span class="sw-chip" style="background:${hex}"></span><span class="sw-hex">${hex}</span></div>`).join('')}
+          </div>
+        </div>
+        ${feats.map((f,i) => `
+          <div class="step"><div class="no">${i+1}</div><div>
+            <h3>${TD(w,'feat'+(i+1)+'t')}</h3>
+            <p>${TD(w,'feat'+(i+1)+'d')}</p>
+            ${featShot(f, i)}
+          </div></div>`).join('')}
+        ${(w.extra||[]).map((f,i) => `
+          <div class="step"><div class="no">${feats.length + i + 1}</div><div>
+            <h3>${TD(w,'extra'+(i+1)+'t')}</h3>
+            <p>${TD(w,'extra'+(i+1)+'d')}</p>
+            ${f.img
+              ? (Array.isArray(f.img)
+                  ? f.img.map(src => shot(`<img src="${src}" alt="${L(w,'title')}">`, null, featCap)).join('')
+                  : shot(`<img src="${f.img}" alt="${L(w,'title')}">`, null, featCap))
+              : shot(`<div class="ph h2x" style="--ph:${c.color}">${TD(w,'extra'+(i+1)+'t')}</div>`, null, 'max-width:320px')}
+          </div></div>`).join('')}`;
+    } else if (w.spec === 'opt') {
+      // 優化型：背景 → 洞察 → Before/After → 成果與後記（各作品專屬內容走 TD，找不到才退回共用佔位）
+      body = `
+        <div class="hero-shot">${w.heroImg ? `<img src="${w.heroImg}" alt="${L(w,'title')}">` : `<div class="ph h1x" style="--ph:${c.color}">${TD(w,'kv')}</div>`}</div>
+        <div class="step"><div class="no">1</div><div><h3>${TD(w,'opt1t')}</h3>${TD(w,'opt1d')}</div></div>
+        <div class="step"><div class="no">2</div><div><h3>${TD(w,'opt2t')}</h3>${TD(w,'opt2d')}</div></div>
+        <div class="step"><div class="no">3</div><div><h3>${TD(w,'opt3t')}</h3>
+          ${DICT['d.'+w.id+'.opt3d'] ? TD(w,'opt3d') : ''}
+          <div class="compare">
+            <div class="box problem"><h4>Before</h4>${TD(w,'beforeD')}</div>
+            <div class="box solve"><h4>After</h4>${TD(w,'afterD')}</div>
+          </div>
+          ${DICT['d.'+w.id+'.opt3note'] ? TD(w,'opt3note') : ''}
+          ${w.flowImg
+            ? shot(`<img src="${w.flowImg}" alt="${L(w,'title')}">`, DICT['d.'+w.id+'.flowcap'] ? TD(w,'flowcap') : null)
+            : shot(`<div class="ph h1x" style="--ph:${c.color}">${TD(w,'flowimg')}</div>`)}
+        </div></div>
+        <div class="step"><div class="no">4</div><div><h3>${TD(w,'opt4t')}</h3>${TD(w,'opt4d')}</div></div>`;
+    } else if (w.spec === 'build') {
+      // 自建產品：真實需求 → MVP → 工具鏈 → 上線 → 迭代
+      body = `
+        <div class="hero-shot"><div class="ph h1x" style="--ph:${c.color}">${T('d.kv')}</div></div>
+        <div class="step"><div class="no">1</div><div><h3>${T('d.build1t')}</h3><p>${T('d.build1d')}</p></div></div>
+        <div class="step"><div class="no">2</div><div><h3>${T('d.build2t')}</h3><p>${T('d.build2d')}</p></div></div>
+        <div class="step"><div class="no">3</div><div><h3>${T('d.build3t')}</h3><p>${T('d.build3d')}</p></div></div>
+        <div class="step"><div class="no">4</div><div><h3>${T('d.build4t')}</h3><p>${T('d.build4d')}</p>
+          ${shot(`<div class="ph h1x" style="--ph:${c.color}">${T('d.resultimg')}</div>`)}
+        </div></div>
+        <div class="step"><div class="no">5</div><div><h3>${T('d.build5t')}</h3><p>${T('d.build5d')}</p></div></div>`;
+    } else {
+      // 深案例：完整編號分段（多件作品共用此版型，內容經 TD() 依 work id 取專屬文字，取不到才退回共用佔位文字）
+      body = `
+        <div class="hero-shot${w.heroPhone ? ' phone' : ''}">${w.heroImg ? `<img src="${w.heroImg}" alt="${L(w,'title')}">` : `<div class="ph h1x" style="--ph:${c.color}">${TD(w,'kv')}</div>`}</div>
+        <div class="step"><div class="no">1</div><div><h3>${TD(w,'deep1t')}</h3><p>${TD(w,'deep1d')}</p></div></div>
+        <div class="step"><div class="no">2</div><div><h3>${TD(w,'deep2t')}</h3><p>${TD(w,'deep2d')}</p>
+          ${w.flowImg
+            ? shot(`<img src="${w.flowImg}" alt="${L(w,'title')}">`, DICT['d.'+w.id+'.flowcap'] ? TD(w,'flowcap') : null)
+            : w.noStepPh ? ''
+            : shot(`<div class="ph h1x" style="--ph:${c.color}">${TD(w,'flowimg')}</div>`)}
+        </div></div>
+        <div class="step"><div class="no">3</div><div><h3>${TD(w,'deep3t')}</h3>
+          ${DICT['d.'+w.id+'.deep3d'] ? TD(w,'deep3d') : ''}
+          ${DICT['d.'+w.id+'.probT'] ? `<div class="compare">
+            <div class="box problem"><h4>${TD(w,'probT')}</h4>${TD(w,'probD')}</div>
+            <div class="box solve"><h4>${TD(w,'solT')}</h4>${TD(w,'solD')}</div>
+          </div>` : ''}
+          ${shotRow(w, w.deep3Imgs)}</div></div>
+        <div class="step"><div class="no">4</div><div><h3>${TD(w,'deep4t')}</h3><p>${TD(w,'deep4d')}</p>
+          ${w.resultImgs
+            ? w.resultImgs.map(r => shot(`<img src="${r.src}" alt="${L(w,'title')}">`, DICT['d.'+w.id+'.'+r.cap] ? TD(w,r.cap) : null)).join('')
+            : w.noStepPh ? ''
+            : shot(`<div class="ph h1x" style="--ph:${c.color}">${TD(w,'resultimg')}</div>`)}
+        </div></div>
+        <div class="step"><div class="no">5</div><div><h3>${TD(w,'deep5t')}</h3>${DICT['d.'+w.id+'.deep5d'] && DICT['d.'+w.id+'.deep5d'][LANG].startsWith('<p>') ? TD(w,'deep5d') : `<p>${TD(w,'deep5d')}</p>`}
+          ${shotRow(w, w.deep5Imgs)}
+          ${themeStrip(w, w.deep5Strip)}</div></div>
+        ${w.futureImg ? `
+        <div class="future-block">
+          <div class="future-label">${T('d.future')}</div>
+          ${shot(`<img src="${w.futureImg}" alt="${L(w,'title')}">`, DICT['d.'+w.id+'.futurecap'] ? TD(w,'futurecap') : null)}
+        </div>` : ''}`;
+    }
+
+    const detailEl = document.getElementById('detail');
+    // 說故事型內頁收窄成閱讀欄；圖牆型維持寬版
+    detailEl.className = 'wrap detail' + (w.spec === 'gallery' ? '' : ' reading');
+    detailEl.innerHTML = `
+      <div class="detail-bar">
+        <button class="back" onclick="go('home')">${icon('arrow-left')} ${T('d.back')}</button>
+        <span class="detail-tag" style="background:${c.color}">${catLabel(w.cat)}</span>
+      </div>
+      <h1>${L(w,'title')}</h1>
+      <p class="lead">${L(w,'lead')}</p>
+      <div class="meta">
+        <span>${icon('building-2')} <b>${L(w,'client')}</b></span>
+        <span>${icon('smartphone')} ${L(w,'platform')}</span>
+        <span>${icon('target')} ${L(w,'role')}</span>
+        <span>${icon('wrench')} ${L(w,'tool')}</span>
+        <span>${icon('calendar')} ${L(w,'year')}</span>
+      </div>
+      ${body}
+      ${w.liveUrl ? `
+      <div class="live-cta">
+        <div>
+          <div class="lbl">${T('d.liveT')}</div>
+          <div class="nm">${TD(w,'liveName')}</div>
+          ${DICT['d.'+w.id+'.liveNote'] ? `<div class="note">${TD(w,'liveNote')}</div>` : ''}
+          <div class="url">${w.liveUrl.replace(/^https?:\/\//, '')}</div>
+        </div>
+        <a class="btn btn-primary" href="${w.liveUrl}" target="_blank" rel="noopener noreferrer">
+          ${T('d.liveBtn')} ${icon('external-link')}
+        </a>
+      </div>` : ''}
+      <div class="next-card" onclick="openDetail('${next.id}')">
+        <div><div class="lbl">${T('d.next')}</div><div class="nm">${L(next,'title')}</div></div>
+        <div class="arrow" style="opacity:1;transform:none;">${icon('arrow-right')}</div>
+      </div>`;
+    showView('detail');
+    if (!keepScroll) window.scrollTo(0,0);
+  }
+
+  /* ---------- View 切換 ---------- */
+  function showView(name) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById('view-'+name).classList.add('active');
+    document.querySelectorAll('.nav-link').forEach(l => {
+      l.classList.toggle('active', l.dataset.view === (name==='detail' ? 'home' : name));
+    });
+  }
+  function go(name) { showView(name); closeMenu(); window.scrollTo(0,0); }
+
+  /* ---------- 漢堡選單 ---------- */
+  function toggleMenu(){ document.getElementById('navlinks').classList.toggle('open'); }
+  function closeMenu(){ document.getElementById('navlinks').classList.remove('open'); }
+
+  /* ---------- Lightbox ---------- */
+  const LB = { list: [], color: 'var(--c-graphic)', idx: 0 };
+  function openLightbox(i) {
+    LB.idx = i;
+    document.getElementById('lightbox').classList.add('open');
+    document.body.style.overflow = 'hidden';
+    renderLightbox();
+  }
+  function closeLightbox() {
+    document.getElementById('lightbox').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  function lbStep(d) {
+    LB.idx = (LB.idx + d + LB.list.length) % LB.list.length;
+    renderLightbox();
+  }
+  function renderLightbox() {
+    const s = LB.list[LB.idx];
+    document.getElementById('lb-stage').innerHTML = s && s.src
+      ? media(s.src, imgLabel(LB.idx+1))
+      : `<div class="ph" style="--ph:${LB.color}">${imgLabel(LB.idx+1)}</div>`;
+    document.getElementById('lb-count').textContent = `${LB.idx+1} / ${LB.list.length}`;
+  }
+  // 鍵盤：ESC 關閉、左右切換
+  document.addEventListener('keydown', e => {
+    if (!document.getElementById('lightbox').classList.contains('open')) return;
+    if (e.key === 'Escape') closeLightbox();
+    if (e.key === 'ArrowRight') lbStep(1);
+    if (e.key === 'ArrowLeft') lbStep(-1);
+  });
+
+  applyLang();   // 依儲存的語言初始化（含 renderGallery）
+</script>
+</body>
+</html>
