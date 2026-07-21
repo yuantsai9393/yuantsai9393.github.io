@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#2b2160">
+<title>🪄 魔法故事書</title>
+<style>
+:root {
+  --night-top: #2b2160;      /* 夜空紫（上） */
+  --night-bottom: #5a3d8a;   /* 夜空紫（下） */
+  --star: #ffd66b;           /* 星光金 */
+  --star-warm: #ff9d6b;      /* 生成按鈕漸層尾色 */
+  --ink: #3a2f5b;            /* 故事卡片文字 */
+  --paper: rgba(255,255,255,.95);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  min-height: 100%;
+  font-family: "Yuanti TC", "PingFang TC", -apple-system, BlinkMacSystemFont, "Noto Sans TC", sans-serif;
+}
+body {
+  background: linear-gradient(180deg, var(--night-top), var(--night-bottom));
+  background-attachment: fixed;
+  color: #fff;
+  -webkit-text-size-adjust: 100%;
+}
+
+.app {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 24px 16px calc(48px + env(safe-area-inset-bottom));
+}
+
+h1 { text-align: center; font-size: 26px; font-weight: 700; margin: 8px 0 4px; }
+.subtitle { text-align: center; opacity: .75; font-size: 14px; margin: 0 0 20px; }
+
+/* ---------- 卡片組 ---------- */
+.group { margin-bottom: 16px; }
+.group-label { font-size: 13px; opacity: .7; margin-bottom: 6px; }
+.group-hint { opacity: .8; }
+
+.card-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+
+.card {
+  /* 觸控目標 ≥ 44px */
+  min-height: 72px;
+  padding: 12px 4px;
+  border-radius: 16px;
+  border: 3px solid transparent;
+  background: rgba(255,255,255,.1);
+  color: #fff;
+  font-family: inherit;
+  cursor: pointer;
+  transition: transform .15s, background .15s, border-color .15s;
+}
+.card:hover { background: rgba(255,255,255,.16); }
+.card[aria-pressed="true"] {
+  border-color: var(--star);
+  background: rgba(255,214,107,.25);
+  transform: scale(1.06);
+}
+.card:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+/* emoji 與名稱要上下堆疊（不可用行內元素，否則名稱會被擠到旁邊折行） */
+.card-emoji { display: block; font-size: 30px; line-height: 1.1; }
+.card-name { display: block; font-size: 12px; margin-top: 2px; white-space: nowrap; }
+
+/* ---------- 睡前模式 ---------- */
+.bedtime {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  border-radius: 14px;
+  margin: 4px 0 8px;
+  cursor: pointer;
+  color: #fff;
+  border: 2px solid rgba(255,255,255,.25);
+  background: transparent;
+  transition: background .15s, border-color .15s;
+}
+.bedtime[aria-pressed="true"] {
+  border-color: var(--star);
+  background: rgba(255,214,107,.2);
+}
+.bedtime:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+
+/* ---------- 生成按鈕 ---------- */
+.generate {
+  width: 100%;
+  min-height: 56px;
+  padding: 16px;
+  font-size: 18px;
+  font-weight: 700;
+  font-family: inherit;
+  border-radius: 20px;
+  border: none;
+  margin-top: 8px;
+  background: rgba(255,255,255,.15);
+  color: rgba(255,255,255,.4);
+  cursor: default;
+  transition: background .2s, color .2s;
+}
+.generate.ready {
+  background: linear-gradient(90deg, var(--star), var(--star-warm));
+  color: #4a2c00;
+  cursor: pointer;
+}
+.generate:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+
+/* ---------- 故事卡片 ---------- */
+.story-card {
+  margin-top: 20px;
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: 20px;
+  padding: 20px;
+}
+.story-text {
+  font-size: 17px;
+  line-height: 1.9;
+  white-space: pre-wrap;
+  margin: 0;
+}
+.story-meta {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #e6e0f2;
+  font-size: 13px;
+  color: #6b5f8c;
+}
+.again {
+  margin-top: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 12px;
+  font-size: 16px;
+  font-family: inherit;
+  border-radius: 14px;
+  border: 2px solid var(--night-bottom);
+  background: #fff;
+  color: var(--night-bottom);
+  cursor: pointer;
+}
+.again:focus-visible { outline: 3px solid var(--night-bottom); outline-offset: 2px; }
+
+/* ---------- 朗讀 ---------- */
+.voice-picker {
+  margin-top: 14px;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  border-radius: 12px;
+  border: 1.5px solid #cfc6e6;
+  background: #f6f3fc;
+  color: var(--ink);
+}
+.speak {
+  margin-top: 10px;
+  width: 100%;
+  min-height: 48px;
+  padding: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  font-family: inherit;
+  border-radius: 14px;
+  border: none;
+  background: var(--night-bottom);
+  color: #fff;
+  cursor: pointer;
+}
+.speak.on { background: #b0446b; }
+.speak:focus-visible { outline: 3px solid var(--night-bottom); outline-offset: 2px; }
+
+/* ---------- 收藏 ---------- */
+.fav-entry {
+  display: block;
+  margin: 0 auto 20px;
+  min-height: 44px;
+  padding: 8px 18px;
+  font-size: 14px;
+  font-family: inherit;
+  border-radius: 22px;
+  border: 1.5px solid rgba(255,255,255,.3);
+  background: rgba(255,255,255,.08);
+  color: #fff;
+  cursor: pointer;
+}
+.fav-entry:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+
+.fav {
+  margin-top: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 12px;
+  font-size: 16px;
+  font-family: inherit;
+  border-radius: 14px;
+  border: 2px solid #e6c9d6;
+  background: #fff;
+  color: #b0446b;
+  cursor: pointer;
+}
+.fav.saved { background: #fdeef4; border-color: #b0446b; }
+.fav:focus-visible { outline: 3px solid #b0446b; outline-offset: 2px; }
+
+/* 收藏清單頁：整頁覆蓋，睡前單手操作比較好按 */
+.fav-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: linear-gradient(180deg, var(--night-top), var(--night-bottom));
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 20px 16px calc(40px + env(safe-area-inset-bottom));
+}
+.fav-panel-inner { max-width: 480px; margin: 0 auto; }
+.fav-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.fav-head h2 { font-size: 20px; font-weight: 700; }
+.fav-close {
+  min-width: 44px; min-height: 44px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,.3);
+  background: rgba(255,255,255,.1);
+  color: #fff;
+  font-size: 20px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.fav-close:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+
+.fav-item {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.fav-open {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  padding: 14px;
+  border-radius: 16px;
+  border: none;
+  background: rgba(255,255,255,.95);
+  color: var(--ink);
+  font-family: inherit;
+  cursor: pointer;
+}
+.fav-open:focus-visible { outline: 3px solid var(--star); outline-offset: 2px; }
+/* 卡片標籤長的時候（雙主角＋睡前）不能把日期擠到下一行，
+   標籤這側截斷，日期固定不換行 */
+.fav-item-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13px;
+  color: #6b5f8c;
+  margin-bottom: 4px;
+}
+.fav-item-cards {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fav-item-date { flex-shrink: 0; white-space: nowrap; }
+.fav-item-preview {
+  font-size: 15px;
+  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.fav-del {
+  flex-shrink: 0;
+  width: 48px;
+  border-radius: 16px;
+  border: 1.5px solid rgba(255,255,255,.25);
+  background: rgba(255,255,255,.08);
+  color: #fff;
+  font-size: 18px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.fav-del:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+
+.fav-empty {
+  text-align: center;
+  opacity: .8;
+  font-size: 15px;
+  line-height: 1.8;
+  padding: 40px 10px;
+}
+
+/* iOS 語音下載引導：平常收合，不干擾主要流程 */
+.voice-help {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #e6e0f2;
+  font-size: 13px;
+  color: #6b5f8c;
+}
+.voice-help summary {
+  cursor: pointer;
+  min-height: 24px;
+  padding: 4px 0;
+  list-style: none;
+}
+.voice-help summary::-webkit-details-marker { display: none; }
+.voice-help p { margin-top: 8px; line-height: 1.75; }
+.voice-help code {
+  background: #f0ebfa;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 12px;
+}
+
+/* ---------- 等待 / 錯誤 ---------- */
+.status {
+  margin-top: 20px;
+  border-radius: 20px;
+  padding: 24px 20px;
+  text-align: center;
+  background: rgba(255,255,255,.1);
+}
+.status-icon { font-size: 40px; display: block; margin-bottom: 10px; }
+.status-text { font-size: 15px; line-height: 1.7; }
+
+.status.error { background: rgba(255,255,255,.14); }
+.status.error .status-text { opacity: .9; }
+.retry {
+  margin-top: 14px;
+  min-height: 44px;
+  padding: 10px 24px;
+  font-size: 15px;
+  font-family: inherit;
+  border-radius: 14px;
+  border: 2px solid var(--star);
+  background: transparent;
+  color: var(--star);
+  cursor: pointer;
+}
+.retry:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+
+/* ---------- 魔法書翻開動畫 ----------
+   純 CSS，不載入任何圖檔。重試最久可能等到 40 秒以上，
+   所以動畫必須是無限循環、看久了也不煩躁的節奏。 */
+.book {
+  position: relative;
+  width: 132px;
+  height: 96px;
+  margin: 0 auto 16px;
+  perspective: 700px;
+}
+/* 書後方的暖光暈 */
+.book::before {
+  content: "";
+  position: absolute;
+  left: 50%; top: 55%;
+  width: 170px; height: 120px;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(ellipse at center, rgba(255,214,107,.38), transparent 70%);
+  animation: glow 2.6s ease-in-out infinite;
+}
+@keyframes glow {
+  0%, 100% { opacity: .55; }
+  50%      { opacity: 1; }
+}
+
+.book-page {
+  position: absolute;
+  bottom: 0;
+  width: 64px; height: 88px;
+  background: linear-gradient(180deg, #fffdf6, #f1e7d2);
+  box-shadow: 0 6px 16px rgba(0,0,0,.28);
+}
+.book-page.left  { left: 1px;  border-radius: 9px 3px 3px 9px; transform: rotate(-2deg); }
+.book-page.right { right: 1px; border-radius: 3px 9px 9px 3px; transform: rotate(2deg); }
+/* 書頁上的字行 */
+.book-page::after {
+  content: "";
+  position: absolute;
+  inset: 13px 9px;
+  background: repeating-linear-gradient(180deg,
+    rgba(90,61,138,.24) 0 2px, transparent 2px 11px);
+  border-radius: 2px;
+}
+
+/* 一直翻過去的那一頁 */
+.book-flip {
+  position: absolute;
+  bottom: 0; left: 50%;
+  width: 64px; height: 88px;
+  background: linear-gradient(180deg, #fffdf6, #ece0c6);
+  border-radius: 3px 9px 9px 3px;
+  transform-origin: left center;
+  box-shadow: -3px 4px 14px rgba(0,0,0,.22);
+  animation: flip 2s cubic-bezier(.45,.05,.55,.95) infinite;
+}
+@keyframes flip {
+  0%   { transform: rotateY(0deg);    opacity: 1; }
+  70%  { transform: rotateY(-142deg); opacity: 1; }
+  100% { transform: rotateY(-180deg); opacity: 0; }
+}
+
+/* 飄出來的星星 */
+.book-spark {
+  position: absolute;
+  font-size: 14px;
+  opacity: 0;
+  animation: spark 2.4s ease-in-out infinite;
+}
+.book-spark.s1 { left: 4px;  top: -4px; }
+.book-spark.s2 { right: 0;   top: -12px; font-size: 12px; animation-delay: .8s; }
+.book-spark.s3 { left: 52%;  top: -18px; animation-delay: 1.6s; }
+@keyframes spark {
+  0%, 100% { opacity: 0; transform: translateY(6px) scale(.7); }
+  40%      { opacity: 1; transform: translateY(-5px) scale(1); }
+}
+
+/* 尊重使用者的「減少動態」設定：
+   動畫全關，但魔法書要停在「已翻開」的靜止姿態，不能停成一團看不懂的形狀 */
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+  .card[aria-pressed="true"] { transform: none; }
+  .book-flip { transform: rotateY(-165deg); opacity: .35; }
+  .book::before { opacity: .8; }
+  .book-spark { opacity: .9; transform: none; }
+}
+
+.hidden { display: none; }
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>🪄 魔法故事書</h1>
+  <p class="subtitle">選三張卡片，變出你的故事</p>
+
+  <button id="fav-entry" class="fav-entry" type="button">⭐ 我的收藏</button>
+
+  <div id="groups"></div>
+
+  <button id="bedtime-btn" class="bedtime" type="button" aria-pressed="false"></button>
+
+  <button id="generate-btn" class="generate" type="button" disabled>變出故事！</button>
+
+  <!-- 生成中 / 錯誤 -->
+  <div id="status" class="status hidden" role="status" aria-live="polite">
+    <div id="book" class="book" aria-hidden="true">
+      <span class="book-spark s1">✨</span>
+      <span class="book-spark s2">⭐</span>
+      <span class="book-spark s3">✨</span>
+      <div class="book-page left"></div>
+      <div class="book-page right"></div>
+      <div class="book-flip"></div>
+    </div>
+    <span id="status-icon" class="status-icon hidden" aria-hidden="true">🌧</span>
+    <span id="status-text" class="status-text"></span>
+    <button id="retry-btn" class="retry hidden" type="button">再試一次</button>
+  </div>
+
+  <!-- 故事 -->
+  <div id="story-card" class="story-card hidden">
+    <p id="story-text" class="story-text"></p>
+    <div id="story-meta" class="story-meta"></div>
+
+    <select id="voice-picker" class="voice-picker hidden" aria-label="選擇朗讀的聲音"></select>
+    <button id="speak-btn" class="speak" type="button">🔊 唸給我聽</button>
+    <button id="fav-btn" class="fav" type="button">🤍 收藏這個故事</button>
+    <button id="again-btn" class="again" type="button">🎲 再變一個</button>
+
+    <details id="voice-help" class="voice-help">
+      <summary>🎧 覺得聲音不夠好聽？</summary>
+      <p>
+        手機內建的中文聲音選擇很少，品質也普通。到
+        <code>設定 → 輔助使用 → 朗讀內容 → 語音 → 中文</code>
+        下載「進階版」的聲音（例如美佳），下載完回到這裡，就能在上面的選單選到比較自然的聲音了。
+      </p>
+    </details>
+  </div>
+</div>
+
+<!-- 收藏清單頁 -->
+<div id="fav-panel" class="fav-panel hidden" role="dialog" aria-modal="true" aria-labelledby="fav-title">
+  <div class="fav-panel-inner">
+    <div class="fav-head">
+      <h2 id="fav-title">⭐ 我的收藏</h2>
+      <button id="fav-close" class="fav-close" type="button" aria-label="關閉收藏">✕</button>
+    </div>
+    <div id="fav-list"></div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════
+   設定
+   ══════════════════════════════════════════════════════════ */
+
+/* Workers proxy 位址。本機開發自動指向 wrangler dev，
+   線上則用部署後的 workers.dev 網址（部署後把下面這行換掉）。
+   注意：這裡只有「網址」，沒有任何金鑰 —— 金鑰只存在 Workers 端。 */
+const PROD_API = "https://magic-storybook.yuantsai9393.workers.dev";
+const isLocal = ["localhost", "127.0.0.1"].includes(location.hostname);
+const API_BASE = isLocal ? "http://localhost:8787" : PROD_API;
+
+/* 卡片內容。必須與 Workers 端的白名單一致，改這裡也要改 workers/src/index.js */
+const CARDS = {
+  角色: [["🦕","小恐龍"], ["🚀","太空人"], ["🦆","鴨鴨"], ["🤖","機器人"]],
+  場景: [["🌲","大森林"], ["🌊","海底"], ["🌙","月亮上"], ["🏰","城堡"]],
+  心情: [["✨","冒險"], ["😄","好笑"], ["😜","調皮"], ["🎁","驚喜"]],
+};
+
+/* 每組可選上限：角色可複選兩個（雙主角），場景與心情單選 */
+const MAX_PICK = { 角色: 2, 場景: 1, 心情: 1 };
+
+const GROUP_HINT = { 角色: "（可以選兩個一起玩）" };
+
+/* ══════════════════════════════════════════════════════════
+   狀態
+   ══════════════════════════════════════════════════════════ */
+
+let pick = { 角色: [], 場景: [], 心情: [] };
+let bedtime = false;
+let loading = false;
+
+const el = (id) => document.getElementById(id);
+
+function isReady() {
+  return Object.keys(CARDS).every((g) => pick[g].length > 0);
+}
+
+/* ══════════════════════════════════════════════════════════
+   卡片選取
+   ══════════════════════════════════════════════════════════ */
+
+/* 選卡規則（原型已驗證）：
+   - 再點一次可取消
+   - 還有空位就加入
+   - 已達上限則replace掉「最早選的」，孩子永遠點得下去、不會卡住，
+     也不需要先學會「取消」這個概念 */
+function choose(group, name) {
+  const cur = pick[group];
+  const max = MAX_PICK[group] || 1;
+  let next;
+  if (cur.includes(name)) next = cur.filter((n) => n !== name);
+  else if (cur.length < max) next = [...cur, name];
+  else next = [...cur.slice(1), name];
+  pick = { ...pick, [group]: next };
+  renderCards();
+  renderGenerateBtn();
+}
+
+function renderGroups() {
+  const html = Object.entries(CARDS).map(([group, items]) => `
+    <div class="group">
+      <div class="group-label" id="label-${group}">
+        ${group}${GROUP_HINT[group] ? `<span class="group-hint">${GROUP_HINT[group]}</span>` : ""}
+      </div>
+      <div class="card-grid" role="group" aria-labelledby="label-${group}">
+        ${items.map(([emoji, name]) => `
+          <button class="card" type="button"
+                  data-group="${group}" data-name="${name}"
+                  aria-pressed="false" aria-label="${group}：${name}">
+            <span class="card-emoji" aria-hidden="true">${emoji}</span>
+            <span class="card-name">${name}</span>
+          </button>
+        `).join("")}
+      </div>
+    </div>
+  `).join("");
+  el("groups").innerHTML = html;
+
+  el("groups").querySelectorAll(".card").forEach((btn) => {
+    btn.addEventListener("click", () => choose(btn.dataset.group, btn.dataset.name));
+  });
+}
+
+function renderCards() {
+  el("groups").querySelectorAll(".card").forEach((btn) => {
+    const on = pick[btn.dataset.group].includes(btn.dataset.name);
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
+  });
+}
+
+/* ══════════════════════════════════════════════════════════
+   睡前模式
+   ══════════════════════════════════════════════════════════ */
+
+function renderBedtime() {
+  const btn = el("bedtime-btn");
+  btn.setAttribute("aria-pressed", bedtime ? "true" : "false");
+  btn.textContent = bedtime
+    ? "🌙 睡前模式：開（故事會慢慢變安靜）"
+    : "🌙 睡前模式：關（聽完還想再聽一個）";
+}
+
+/* ══════════════════════════════════════════════════════════
+   生成
+   ══════════════════════════════════════════════════════════ */
+
+function renderGenerateBtn() {
+  const btn = el("generate-btn");
+  const ready = isReady() && !loading;
+  btn.disabled = !ready;
+  btn.classList.toggle("ready", ready);
+  btn.textContent = loading ? "魔法書翻開中⋯ ✨" : "變出故事！";
+}
+
+/* 重試最久可能等超過 30 秒，一句話不動會讓人以為當掉了，
+   所以等待期間輪播訊息，讓家長知道魔法還在運作 */
+const LOADING_MESSAGES = [
+  "魔法書正在翻開⋯",
+  "星星正在排隊⋯",
+  "故事快要變出來了⋯",
+];
+let messageTimer = null;
+
+function stopMessages() {
+  clearInterval(messageTimer);
+  messageTimer = null;
+}
+
+function showLoading() {
+  el("status").className = "status loading";
+  el("book").classList.remove("hidden");
+  el("status-icon").classList.add("hidden");
+  el("retry-btn").classList.add("hidden");
+  el("status-text").textContent = LOADING_MESSAGES[0];
+
+  let i = 0;
+  stopMessages();
+  messageTimer = setInterval(() => {
+    i = (i + 1) % LOADING_MESSAGES.length;
+    el("status-text").textContent = LOADING_MESSAGES[i];
+  }, 3500);
+}
+
+/* 重試時停掉輪播、換成明確的訊息：讓家長知道不是當掉，是正在重試 */
+function showRetrying(attempt) {
+  stopMessages();
+  el("status-text").textContent = `魔法有點卡住，再試一次⋯（第 ${attempt} 次）`;
+}
+
+function showError(text) {
+  stopMessages();
+  el("status").className = "status error";
+  el("book").classList.add("hidden");
+  el("status-icon").classList.remove("hidden");
+  el("status-text").textContent = text;
+  el("retry-btn").classList.remove("hidden");
+}
+
+function hideStatus() {
+  stopMessages();
+  el("status").classList.add("hidden");
+}
+
+/* 目前畫面上這則故事。收藏頁載入舊故事時也是灌進這裡，
+   所以朗讀、收藏按鈕都不必分「新故事 / 舊故事」兩套邏輯 */
+let currentStory = null;   /* { id, text, characters, scene, mood, bedtime } */
+
+function storyLabel(s) {
+  return `${s.characters.join("、")}．${s.scene}．${s.mood}` + (s.bedtime ? "．🌙 睡前" : "");
+}
+
+function showStory(story) {
+  currentStory = story;
+  el("story-text").textContent = story.text;
+  el("story-meta").textContent = storyLabel(story);
+  el("story-card").classList.remove("hidden");
+  renderFavBtn();
+}
+
+function hideStory() { el("story-card").classList.add("hidden"); }
+
+/* 友善的錯誤訊息（給家長看，不要出現技術術語） */
+function friendlyError(errorCode) {
+  switch (errorCode) {
+    case "network":            return "連不到魔法書，檢查一下網路再試試。";
+    case "rate_limited":       return "故事變得太快囉，休息一分鐘再來變下一個。";
+    case "invalid_card_value": return "卡片好像怪怪的，重新選一次看看。";
+    case "origin_not_allowed": return "這個網址還沒被魔法書認得。";
+    default:                   return "魔法書試了好幾次都打不開，等一下再試試看。";
+  }
+}
+
+const MAX_ATTEMPTS = 4;
+const RETRY_BASE_MS = 1500;   /* 間隔遞增：1.5s → 3s → 4.5s */
+
+/* 這些錯誤重試也不會變好，直接告訴使用者，不要讓孩子白等：
+   - invalid_card_value / origin_not_allowed：請求本身就不對，重送幾次都一樣
+   - rate_limited：限流以「分鐘」為單位，重試總共才等 9 秒，等不完
+   - server_misconfigured：Workers 沒設金鑰，要人去修 */
+const NO_RETRY = [
+  "invalid_card_value",
+  "origin_not_allowed",
+  "rate_limited",
+  "server_misconfigured",
+];
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function requestStory() {
+  try {
+    const res = await fetch(API_BASE + "/story", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        characters: pick.角色,
+        scene: pick.場景[0],
+        mood: pick.心情[0],
+        bedtime: bedtime,
+      }),
+    });
+    const data = await res.json().catch(() => null);
+    if (res.ok && data && data.story) return { ok: true, story: data.story };
+    return { ok: false, error: (data && data.error) || "unknown" };
+  } catch (e) {
+    /* 連不上 Workers（斷網、伺服器沒開） */
+    return { ok: false, error: "network" };
+  }
+}
+
+async function generate() {
+  if (!isReady() || loading) return;
+  loading = true;
+  stopSpeaking();   /* 舊故事還在唸的話先停掉，不要跟新故事疊在一起 */
+  hideStory();
+  renderGenerateBtn();
+  showLoading();
+
+  let lastError = "unknown";
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    if (attempt > 1) showRetrying(attempt);
+
+    const result = await requestStory();
+    if (result.ok) {
+      hideStatus();
+      showStory({
+        id: null,                        /* 還沒收藏 */
+        text: result.story,
+        characters: pick.角色.slice(),
+        scene: pick.場景[0],
+        mood: pick.心情[0],
+        bedtime: bedtime,
+      });
+      loading = false;
+      renderGenerateBtn();
+      return;
+    }
+
+    lastError = result.error;
+    if (NO_RETRY.includes(lastError)) break;
+    if (attempt < MAX_ATTEMPTS) await sleep(RETRY_BASE_MS * attempt);
+  }
+
+  showError(friendlyError(lastError));
+  loading = false;
+  renderGenerateBtn();
+}
+
+/* ══════════════════════════════════════════════════════════
+   收藏（localStorage）
+
+   沿用 jp-shop 的做法：讀寫都包 try/catch。
+   無痕模式或儲存空間滿的時候 localStorage 會直接丟例外，
+   不能讓它把整個 App 弄掛 —— 收藏失敗頂多這則沒存到，故事還是要能聽。
+   ══════════════════════════════════════════════════════════ */
+
+const FAVS_KEY = "storybook_favs";
+
+let favs = [];
+try { favs = JSON.parse(localStorage.getItem(FAVS_KEY) || "[]"); } catch (e) { favs = []; }
+if (!Array.isArray(favs)) favs = [];
+
+function saveFavs() {
+  try { localStorage.setItem(FAVS_KEY, JSON.stringify(favs)); } catch (e) {}
+}
+
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+function isFav(story) {
+  return !!(story && story.id && favs.some((f) => f.id === story.id));
+}
+
+function renderFavBtn() {
+  const btn = el("fav-btn");
+  const saved = isFav(currentStory);
+  btn.textContent = saved ? "💛 已收藏" : "🤍 收藏這個故事";
+  btn.classList.toggle("saved", saved);
+}
+
+function renderFavEntry() {
+  el("fav-entry").textContent = favs.length
+    ? `⭐ 我的收藏（${favs.length}）`
+    : "⭐ 我的收藏";
+}
+
+function toggleFav() {
+  if (!currentStory) return;
+
+  if (isFav(currentStory)) {
+    favs = favs.filter((f) => f.id !== currentStory.id);
+    currentStory.id = null;
+  } else {
+    const item = {
+      id: String(Date.now()),
+      text: currentStory.text,
+      characters: currentStory.characters,
+      scene: currentStory.scene,
+      mood: currentStory.mood,
+      bedtime: currentStory.bedtime,
+      savedAt: new Date().toISOString(),
+    };
+    favs.unshift(item);          /* 最新的排最前面 */
+    currentStory = item;
+  }
+  saveFavs();
+  renderFavBtn();
+  renderFavEntry();
+  renderFavList();
+}
+
+function favDate(iso) {
+  const d = new Date(iso);
+  if (isNaN(d)) return "";
+  return `${d.getMonth() + 1}月${d.getDate()}日`;
+}
+
+function renderFavList() {
+  const box = el("fav-list");
+  if (!favs.length) {
+    box.innerHTML = `<p class="fav-empty">還沒有收藏的故事。<br>聽到喜歡的，按下 🤍 就會留在這裡。</p>`;
+    return;
+  }
+  box.innerHTML = favs.map((f) => `
+    <div class="fav-item">
+      <button class="fav-open" type="button" data-id="${f.id}">
+        <div class="fav-item-meta">
+          <span class="fav-item-cards">${escapeHtml(storyLabel(f))}</span>
+          <span class="fav-item-date">${favDate(f.savedAt)}</span>
+        </div>
+        <div class="fav-item-preview">${escapeHtml(f.text)}</div>
+      </button>
+      <button class="fav-del" type="button" data-del="${f.id}"
+              aria-label="刪除這則收藏">🗑</button>
+    </div>
+  `).join("");
+}
+
+function openFavPanel() {
+  renderFavList();
+  el("fav-panel").classList.remove("hidden");
+}
+
+function closeFavPanel() {
+  el("fav-panel").classList.add("hidden");
+}
+
+/* ══════════════════════════════════════════════════════════
+   朗讀模組（Web Speech 版）
+
+   對 UI 層只暴露 speak(text) / stopSpeaking() 兩個介面。
+   v1.5 要換成神經網路 TTS（Workers 加 /tts 端點）時，只需要換掉
+   這一段的內部實作，UI 層完全不用動。
+   ══════════════════════════════════════════════════════════ */
+
+const SPEECH_OK =
+  "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
+
+/* 停頓分級：模仿真人講故事的換氣節奏 */
+const PAUSE_MS = { 1: 250, 2: 600, 3: 1000 };
+
+/* 這些符號會被語音引擎「逐字念出來」（例如把括號念成「小括號」），
+   送進去之前一定要清掉。
+   注意：整段切句都不可以用 lookbehind regex，
+   舊版 iOS Safari 不支援，會讓整頁直接掛掉。 */
+const NOISE_CHARS = /[「」『』（）()《》〈〉【】\[\]"'“”‘’…⋯‧．—－\-~～*#·、。，！？!?；;：:]/g;
+
+let voices = [];
+let voiceName = "";
+let speaking = false;
+let stopRequested = false;
+
+/* 把故事切成一段一段，每段附帶「講完之後要停多久」 */
+function splitIntoSegments(text) {
+  const marked = text
+    .replace(/\n+/g, "|3|")              /* 段落：最長停頓 */
+    .replace(/([。！？!?])/g, "$1|2|")    /* 句末：中停頓 */
+    .replace(/([，、,；;：:])/g, "$1|1|"); /* 逗號：短停頓 */
+
+  /* split 帶捕獲群組後，偶數索引是文字、奇數索引是停頓等級 */
+  const chunks = marked.split(/\|(\d)\|/);
+  const segments = [];
+  for (let i = 0; i < chunks.length; i += 2) {
+    const clean = chunks[i].replace(NOISE_CHARS, " ").replace(/\s+/g, " ").trim();
+    const pause = PAUSE_MS[chunks[i + 1]] || 500;
+
+    if (clean) {
+      segments.push({ text: clean, pause: pause });
+    } else if (segments.length) {
+      /* 這一塊清乾淨後是空的，但它的停頓不能跟著消失。
+         最常見的情況是段落結尾「。\n\n」會被切成 句末標記 + 空塊 + 段落標記，
+         若直接丟掉空塊，段落的 1000ms 就會被降級成句末的 600ms，
+         「段落」這一級的停頓等於從來沒生效過。取較長的那個併進前一段。 */
+      const last = segments[segments.length - 1];
+      last.pause = Math.max(last.pause, pause);
+    }
+  }
+  return segments;
+}
+
+function setSpeakingState(on) {
+  speaking = on;
+  const btn = el("speak-btn");
+  btn.textContent = on ? "⏹ 停下來" : "🔊 唸給我聽";
+  btn.classList.toggle("on", on);
+}
+
+function speak(text) {
+  if (!SPEECH_OK) return;
+  stopSpeaking();
+
+  const segments = splitIntoSegments(text);
+  if (!segments.length) return;
+
+  const voice = voices.find((v) => v.name === voiceName);
+  stopRequested = false;
+  setSpeakingState(true);
+
+  let i = 0;
+  const next = () => {
+    if (stopRequested || i >= segments.length) {
+      setSpeakingState(false);
+      return;
+    }
+    const seg = segments[i];
+    const u = new SpeechSynthesisUtterance(seg.text);
+    u.lang = "zh-TW";
+    /* 每句語速語調微幅浮動，降低整篇同一個調子的機械感 */
+    u.rate = 0.82 + (i % 3) * 0.03;   /* 0.82 / 0.85 / 0.88 */
+    u.pitch = 1.06 + (i % 4) * 0.04;  /* 1.06 / 1.10 / 1.14 / 1.18 */
+    if (voice) u.voice = voice;
+    u.onend = () => setTimeout(next, seg.pause);
+    u.onerror = () => setSpeakingState(false);
+    i++;
+    speechSynthesis.speak(u);
+  };
+  next();
+}
+
+function stopSpeaking() {
+  stopRequested = true;
+  if (SPEECH_OK) speechSynthesis.cancel();
+  setSpeakingState(false);
+}
+
+/* ---------- 語音清單 ----------
+   iOS 的 getVoices() 第一次常常回空陣列，要等 voiceschanged 事件才有 */
+function loadVoices() {
+  if (!SPEECH_OK) return;
+  const all = speechSynthesis.getVoices() || [];
+  voices = all.filter((v) => v.lang && v.lang.toLowerCase().indexOf("zh") === 0);
+
+  /* 預設挑品質較好的；使用者已選過就不要蓋掉 */
+  if (voices.length && !voices.some((v) => v.name === voiceName)) {
+    const best = voices.find((v) => /美佳|Meijia|Siri|Google/.test(v.name)) || voices[0];
+    voiceName = best.name;
+  }
+  renderVoicePicker();
+}
+
+function renderVoicePicker() {
+  const sel = el("voice-picker");
+  /* 只有一個聲音可選時，下拉選單沒有意義，收起來 */
+  if (voices.length < 2) {
+    sel.classList.add("hidden");
+    return;
+  }
+  sel.classList.remove("hidden");
+  sel.innerHTML = voices
+    .map((v) => `<option value="${v.name}">🎙 ${v.name}（${v.lang}）</option>`)
+    .join("");
+  sel.value = voiceName;
+}
+
+/* ══════════════════════════════════════════════════════════
+   啟動
+   ══════════════════════════════════════════════════════════ */
+
+renderGroups();
+renderCards();
+renderBedtime();
+renderGenerateBtn();
+renderFavEntry();
+
+/* ---------- 收藏 ---------- */
+el("fav-btn").addEventListener("click", toggleFav);
+el("fav-entry").addEventListener("click", openFavPanel);
+el("fav-close").addEventListener("click", closeFavPanel);
+
+el("fav-list").addEventListener("click", (e) => {
+  const del = e.target.closest("[data-del]");
+  if (del) {
+    favs = favs.filter((f) => f.id !== del.dataset.del);
+    saveFavs();
+    renderFavList();
+    renderFavEntry();
+    renderFavBtn();   /* 刪掉的可能正是畫面上這則，愛心要跟著變回空心 */
+    return;
+  }
+  const open = e.target.closest("[data-id]");
+  if (open) {
+    const fav = favs.find((f) => f.id === open.dataset.id);
+    if (!fav) return;
+    stopSpeaking();          /* 別讓上一則還在唸 */
+    hideStatus();
+    showStory(fav);
+    closeFavPanel();
+    el("story-card").scrollIntoView({ block: "start" });
+  }
+});
+
+/* 收藏頁開著時按 Esc 關閉 */
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !el("fav-panel").classList.contains("hidden")) closeFavPanel();
+});
+
+el("bedtime-btn").addEventListener("click", () => {
+  bedtime = !bedtime;
+  renderBedtime();
+});
+el("generate-btn").addEventListener("click", generate);
+el("again-btn").addEventListener("click", generate);
+el("retry-btn").addEventListener("click", generate);
+
+/* 朗讀：iOS 規定必須由使用者手勢觸發，所以只能綁在按鈕上，不可自動播放 */
+el("speak-btn").addEventListener("click", () => {
+  if (speaking) stopSpeaking();
+  else speak(el("story-text").textContent);
+});
+
+el("voice-picker").addEventListener("change", (e) => {
+  voiceName = e.target.value;
+  /* 換聲音時如果正在唸，用新聲音從頭開始 */
+  if (speaking) speak(el("story-text").textContent);
+});
+
+if (SPEECH_OK) {
+  loadVoices();
+  speechSynthesis.addEventListener("voiceschanged", loadVoices);
+} else {
+  /* 瀏覽器不支援朗讀時，不要留一顆按了沒反應的按鈕 */
+  el("speak-btn").classList.add("hidden");
+  el("voice-help").classList.add("hidden");
+}
+
+/* 真的離開頁面時才停，避免關掉頁面後聲音還在背景繼續唸。
+   刻意不綁 visibilitychange：睡前情境下家長很可能把手機放下、螢幕自動鎖上，
+   那時故事應該繼續唸完，而不是被切斷。 */
+window.addEventListener("pagehide", stopSpeaking);
+</script>
+</body>
+</html>
