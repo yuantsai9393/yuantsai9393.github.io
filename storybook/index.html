@@ -41,7 +41,8 @@ h1 { text-align: center; font-size: 26px; font-weight: 700; margin: 8px 0 4px; }
 .group-label { font-size: 13px; opacity: .7; margin-bottom: 6px; }
 .group-hint { opacity: .8; }
 
-.card-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+/* 3 欄 2 排：每張卡變寬，名字不會擠，觸控目標也更好按 */
+.card-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 
 .card {
   /* 觸控目標 ≥ 44px */
@@ -86,6 +87,25 @@ h1 { text-align: center; font-size: 26px; font-weight: 700; margin: 8px 0 4px; }
   background: rgba(255,214,107,.2);
 }
 .bedtime:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+
+/* ---------- 隨機驚喜 ---------- */
+.surprise {
+  width: 100%;
+  min-height: 48px;
+  padding: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  border-radius: 16px;
+  margin-top: 4px;
+  cursor: pointer;
+  border: 2px dashed rgba(255,255,255,.4);
+  background: rgba(255,255,255,.08);
+  color: #fff;
+  transition: background .15s;
+}
+.surprise:hover { background: rgba(255,255,255,.14); }
+.surprise:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
 
 /* ---------- 生成按鈕 ---------- */
 .generate {
@@ -453,6 +473,8 @@ h1 { text-align: center; font-size: 26px; font-weight: 700; margin: 8px 0 4px; }
 
   <div id="groups"></div>
 
+  <button id="surprise-btn" class="surprise" type="button">🎲 隨機驚喜（幫我全部選好）</button>
+
   <button id="bedtime-btn" class="bedtime" type="button" aria-pressed="false"></button>
 
   <button id="generate-btn" class="generate" type="button" disabled>變出故事！</button>
@@ -517,10 +539,14 @@ const isLocal = ["localhost", "127.0.0.1"].includes(location.hostname);
 const API_BASE = isLocal ? "http://localhost:8787" : PROD_API;
 
 /* 卡片內容。必須與 Workers 端的白名單一致，改這裡也要改 workers/src/index.js */
+/* 三組各 6 張，排成 3 欄 2 排：一眼看完不用滑動。
+   心情卡刻意用孩子有切身體驗的具體感受（想睡覺、肚子餓），
+   而不是「溫馨」「神秘」這種大人視角的抽象形容詞。
+   emoji 是刻意的佔位設計，v2 換插畫時只需改這裡的圖示欄位，UI 邏輯不動。 */
 const CARDS = {
-  角色: [["🦕","小恐龍"], ["🚀","太空人"], ["🦆","鴨鴨"], ["🤖","機器人"]],
-  場景: [["🌲","大森林"], ["🌊","海底"], ["🌙","月亮上"], ["🏰","城堡"]],
-  心情: [["✨","冒險"], ["😄","好笑"], ["😜","調皮"], ["🎁","驚喜"]],
+  角色: [["🦕","小恐龍"], ["🚀","太空人"], ["🦆","鴨鴨"], ["🤖","機器人"], ["🐰","小兔子"], ["🐻","阿熊"]],
+  場景: [["🌲","大森林"], ["🌊","海底"], ["🌙","月亮上"], ["🏰","城堡"], ["🚀","外太空"], ["🍭","糖果屋"]],
+  心情: [["✨","冒險"], ["😄","好笑"], ["😜","調皮"], ["🎁","驚喜"], ["😴","想睡覺"], ["🍩","肚子餓"]],
 };
 
 /* 每組可選上限：角色可複選兩個（雙主角），場景與心情單選 */
@@ -559,6 +585,21 @@ function choose(group, name) {
   else if (cur.length < max) next = [...cur, name];
   else next = [...cur.slice(1), name];
   pick = { ...pick, [group]: next };
+  renderCards();
+  renderGenerateBtn();
+}
+
+/* 🎲 一鍵全選。四成機率給雙主角——雙主角故事有對話互動、品質較好，
+   但不能每次都給，否則單主角的組合就沒機會出現了 */
+function surprise() {
+  const pickOne = (group) => CARDS[group][Math.floor(Math.random() * CARDS[group].length)][1];
+  const roleCount = Math.random() < 0.4 ? 2 : 1;
+  const roles = CARDS.角色
+    .map((c) => c[1])
+    .sort(() => Math.random() - 0.5)
+    .slice(0, roleCount);
+
+  pick = { 角色: roles, 場景: [pickOne("場景")], 心情: [pickOne("心情")] };
   renderCards();
   renderGenerateBtn();
 }
@@ -1047,6 +1088,7 @@ el("bedtime-btn").addEventListener("click", () => {
   bedtime = !bedtime;
   renderBedtime();
 });
+el("surprise-btn").addEventListener("click", surprise);
 el("generate-btn").addEventListener("click", generate);
 el("again-btn").addEventListener("click", generate);
 el("retry-btn").addEventListener("click", generate);
