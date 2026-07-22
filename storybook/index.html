@@ -33,8 +33,18 @@ body {
   padding: 24px 16px calc(48px + env(safe-area-inset-bottom));
 }
 
-h1 { text-align: center; font-size: 26px; font-weight: 700; margin: 8px 0 4px; }
-.subtitle { text-align: center; opacity: .75; font-size: 14px; margin: 0 0 20px; }
+/* 標題列：左邊標題、右邊睡前模式全域開關。
+   睡前模式是「進來前就決定好的意圖」（今晚要哄睡還是同樂），屬前置決策，
+   所以放在右上角最顯眼處，而不是藏在選完卡之後的按鈕群裡。 */
+.app-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+h1 { font-size: 26px; font-weight: 700; margin: 8px 0 4px; }
+.subtitle { opacity: .75; font-size: 14px; margin: 0; }
 
 /* ---------- 卡片組 ---------- */
 .group { margin-bottom: 16px; }
@@ -67,26 +77,63 @@ h1 { text-align: center; font-size: 26px; font-weight: 700; margin: 8px 0 4px; }
 .card-emoji { display: block; font-size: 30px; line-height: 1.1; }
 .card-name { display: block; font-size: 12px; margin-top: 2px; white-space: nowrap; }
 
-/* ---------- 睡前模式 ---------- */
+/* ---------- 睡前模式（右上角全域開關）----------
+   操作者是家長，需要一眼確認「現在是哪個狀態」。
+   單靠圖示會產生「這圖是現狀、還是點了會變成的樣子」的混淆，
+   所以用三層同時變化來鎖定語意：
+     ① 圖示   清醒滿月 🌝 ↔ 睡著月亮 😴
+     ② 滑桿   左 ↔ 右（開關的心智模型）
+     ③ 底色   明亮紫 ↔ 深夜暗紫
+   文字用「說故事／睡覺囉」而非「開／關」，家長不必推理哪個是開。 */
 .bedtime {
-  width: 100%;
+  flex-shrink: 0;
+  width: 76px;
   min-height: 44px;
-  padding: 10px;
-  font-size: 14px;
+  margin-top: 4px;
+  padding: 8px 8px 6px;
+  border-radius: 16px;
   font-family: inherit;
-  border-radius: 14px;
-  margin: 4px 0 8px;
-  cursor: pointer;
+  line-height: 1.2;
+  text-align: center;
   color: #fff;
-  border: 2px solid rgba(255,255,255,.25);
-  background: transparent;
-  transition: background .15s, border-color .15s;
+  cursor: pointer;
+  border: 2px solid rgba(255,255,255,.2);
+  background: linear-gradient(180deg, #7a6bc4, #8f7fd6);
+  transition: background .3s, border-color .3s;
 }
 .bedtime[aria-pressed="true"] {
   border-color: var(--star);
-  background: rgba(255,214,107,.2);
+  background: linear-gradient(180deg, #1a1240, #2b2160);
 }
 .bedtime:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+
+.bedtime-icon { display: block; font-size: 25px; }
+
+.bedtime-track {
+  display: block;
+  position: relative;
+  width: 38px;
+  height: 16px;
+  margin: 4px auto 3px;
+  border-radius: 10px;
+  background: rgba(255,255,255,.3);
+  transition: background .3s;
+}
+.bedtime[aria-pressed="true"] .bedtime-track { background: var(--star); }
+
+.bedtime-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  transition: left .3s;
+}
+.bedtime[aria-pressed="true"] .bedtime-thumb { left: 24px; }
+
+.bedtime-label { display: block; font-size: 11px; opacity: .9; }
 
 /* ---------- 隨機驚喜 ---------- */
 .surprise {
@@ -197,11 +244,12 @@ h1 { text-align: center; font-size: 26px; font-weight: 700; margin: 8px 0 4px; }
 .speak:focus-visible { outline: 3px solid var(--night-bottom); outline-offset: 2px; }
 
 /* ---------- 收藏 ---------- */
+/* 靠左的小膠囊：把右上角完整讓給睡前模式開關，兩者不搶位置 */
 .fav-entry {
-  display: block;
-  margin: 0 auto 20px;
+  display: inline-block;
+  margin: 0 0 18px;
   min-height: 44px;
-  padding: 8px 18px;
+  padding: 8px 16px;
   font-size: 14px;
   font-family: inherit;
   border-radius: 22px;
@@ -466,16 +514,24 @@ h1 { text-align: center; font-size: 26px; font-weight: 700; margin: 8px 0 4px; }
 </head>
 <body>
 <div class="app">
-  <h1>🪄 魔法故事書</h1>
-  <p class="subtitle">選三張卡片，變出你的故事</p>
+  <div class="app-header">
+    <div>
+      <h1>🪄 魔法故事書</h1>
+      <p class="subtitle">選三張卡片，變出你的故事</p>
+    </div>
+    <button id="bedtime-btn" class="bedtime" type="button"
+            aria-pressed="false" aria-label="睡前模式">
+      <span id="bedtime-icon" class="bedtime-icon" aria-hidden="true">🌝</span>
+      <span class="bedtime-track" aria-hidden="true"><span class="bedtime-thumb"></span></span>
+      <span id="bedtime-label" class="bedtime-label">說故事</span>
+    </button>
+  </div>
 
   <button id="fav-entry" class="fav-entry" type="button">⭐ 我的收藏</button>
 
   <div id="groups"></div>
 
   <button id="surprise-btn" class="surprise" type="button">🎲 隨機驚喜（幫我全部選好）</button>
-
-  <button id="bedtime-btn" class="bedtime" type="button" aria-pressed="false"></button>
 
   <button id="generate-btn" class="generate" type="button" disabled>變出故事！</button>
 
@@ -641,11 +697,11 @@ function renderCards() {
    ══════════════════════════════════════════════════════════ */
 
 function renderBedtime() {
-  const btn = el("bedtime-btn");
-  btn.setAttribute("aria-pressed", bedtime ? "true" : "false");
-  btn.textContent = bedtime
-    ? "🌙 睡前模式：開（故事會慢慢變安靜）"
-    : "🌙 睡前模式：關（聽完還想再聽一個）";
+  /* 只切換 aria-pressed，圖示/滑桿/底色三層都靠 CSS 跟著變，
+     不要在 JS 裡各改各的，才不會有某一層忘了同步 */
+  el("bedtime-btn").setAttribute("aria-pressed", bedtime ? "true" : "false");
+  el("bedtime-icon").textContent = bedtime ? "😴" : "🌝";
+  el("bedtime-label").textContent = bedtime ? "睡覺囉" : "說故事";
 }
 
 /* ══════════════════════════════════════════════════════════
