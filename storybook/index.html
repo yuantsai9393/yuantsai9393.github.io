@@ -914,6 +914,7 @@ function toggleFav() {
   if (!currentStory) return;
 
   if (isFav(currentStory)) {
+    audioCacheDelete(currentStory.id);   /* 取消收藏就不用再留著音檔 */
     favs = favs.filter((f) => f.id !== currentStory.id);
     currentStory.id = null;
   } else {
@@ -928,6 +929,12 @@ function toggleFav() {
     };
     favs.unshift(item);          /* 最新的排最前面 */
     currentStory = item;
+
+    /* 剛剛唸過的話，音檔一起存起來：之後重聽不用再呼叫 /tts。
+       這是省 Azure 額度的關鍵設計 */
+    if (lastAudio && lastAudio.text === item.text && lastAudio.bedtime === item.bedtime) {
+      audioCachePut(item.id, lastAudio.blob);
+    }
   }
   saveFavs();
   renderFavBtn();
@@ -972,11 +979,62 @@ function closeFavPanel() {
 }
 
 /* ══════════════════════════════════════════════════════════
-   朗讀模組（Web Speech 版）
+   音檔快取（IndexedDB）
 
-   對 UI 層只暴露 speak(text) / stopSpeaking() 兩個介面。
-   v1.5 要換成神經網路 TTS（Workers 加 /tts 端點）時，只需要換掉
-   這一段的內部實作，UI 層完全不用動。
+   localStorage 只能存字串，二進位音檔要用 IndexedDB。
+   這是省錢設計：收藏的故事重聽時直接播快取，不再呼叫 /tts。
+   整層都是「有最好、沒有也不能壞」——快取失敗頂多多花一次 TTS，
+   絕不能讓故事唸不出來。
+   ══════════════════════════════════════════════════════════ */
+
+const AUDIO_DB = "storybook";
+const AUDIO_STORE = "audio";
+
+function openAudioDb() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(AUDIO_DB, 1);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(AUDIO_STORE)) db.createObjectStore(AUDIO_STORE);
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function audioCacheGet(id) {
+  if (!id || !("indexedDB" in window)) return null;
+  try {
+    const db = await openAudioDb();
+    return await new Promise((resolve) => {
+      const req = db.transaction(AUDIO_STORE, "readonly").objectStore(AUDIO_STORE).get(id);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => resolve(null);
+    });
+  } catch (e) { return null; }
+}
+
+async function audioCachePut(id, blob) {
+  if (!id || !("indexedDB" in window)) return;
+  try {
+    const db = await openAudioDb();
+    db.transaction(AUDIO_STORE, "readwrite").objectStore(AUDIO_STORE).put(blob, id);
+  } catch (e) {}
+}
+
+async function audioCacheDelete(id) {
+  if (!id || !("indexedDB" in window)) return;
+  try {
+    const db = await openAudioDb();
+    db.transaction(AUDIO_STORE, "readwrite").objectStore(AUDIO_STORE).delete(id);
+  } catch (e) {}
+}
+
+/* ══════════════════════════════════════════════════════════
+   朗讀模組
+
+   主要走 Azure 曉臻（Workers 的 /tts），失敗才退回 Web Speech。
+   對 UI 層仍然只暴露 speak() / stopSpeaking() 兩個介面。
    ══════════════════════════════════════════════════════════ */
 
 const SPEECH_OK =
@@ -1024,16 +1082,105 @@ function splitIntoSegments(text) {
   return segments;
 }
 
-function setSpeakingState(on) {
+function setSpeakingState(on, label) {
   speaking = on;
   const btn = el("speak-btn");
-  btn.textContent = on ? "⏹ 停下來" : "🔊 唸給我聽";
+  btn.textContent = label || (on ? "⏹ 停下來" : "🔊 唸給我聽");
   btn.classList.toggle("on", on);
 }
 
-function speak(text) {
-  if (!SPEECH_OK) return;
+/* ---------- Azure 曉臻 ----------
+   iOS 規定 play() 必須在使用者手勢的「同一個事件迴圈」內呼叫，
+   但我們得先 await fetch 拿到音檔才有東西可播，await 之後手勢授權就失效了，
+   直接照抄範例在 iPhone 上會播不出來（而 iPhone 正是本產品的主場景）。
+
+   解法：點按鈕的當下先用一段無聲音檔把 <audio> 元素「解鎖」。
+   同一個元素一旦在手勢中播放過，之後換 src 再播就會被允許。 */
+const SILENT_WAV =
+  "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
+
+let audioEl = null;
+let audioUrl = null;
+let usingFallback = false;   /* Azure 失敗過，改用 Web Speech */
+
+/* 必須在 click handler 裡「同步」呼叫，不可以放在 await 後面 */
+function unlockAudio() {
+  if (!audioEl) {
+    audioEl = new Audio();
+    audioEl.addEventListener("ended", () => setSpeakingState(false));
+    audioEl.addEventListener("error", () => setSpeakingState(false));
+  }
+  try {
+    audioEl.src = SILENT_WAV;
+    const p = audioEl.play();
+    if (p && p.catch) p.catch(() => {});
+  } catch (e) {}
+}
+
+function playBlob(blob) {
+  if (audioUrl) URL.revokeObjectURL(audioUrl);
+  audioUrl = URL.createObjectURL(blob);
+  audioEl.src = audioUrl;
+  const p = audioEl.play();
+  if (p && p.catch) {
+    p.catch(() => {
+      /* 萬一還是被瀏覽器擋下來，至少讓故事唸得出來 */
+      usingFallback = true;
+      renderVoicePicker();
+      speakWithWebSpeech(el("story-text").textContent);
+    });
+  }
+}
+
+async function fetchTts(text, bedtime) {
+  const res = await fetch(API_BASE + "/tts", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text: text, bedtime: bedtime }),
+  });
+  if (!res.ok) throw new Error("tts_failed");
+  return await res.blob();
+}
+
+/* 同一則故事重聽不要重抓（省 TTS 額度）。收藏過的另外進 IndexedDB。 */
+let lastAudio = null;   /* { text, bedtime, blob } */
+
+async function speak(story) {
+  if (!story || !story.text) return;
   stopSpeaking();
+  stopRequested = false;
+  setSpeakingState(true, "準備聲音中⋯");
+
+  try {
+    let blob = null;
+
+    if (lastAudio && lastAudio.text === story.text && lastAudio.bedtime === story.bedtime) {
+      blob = lastAudio.blob;
+    }
+    if (!blob) blob = await audioCacheGet(story.id);
+    if (!blob) {
+      blob = await fetchTts(story.text, story.bedtime);
+      if (story.id) audioCachePut(story.id, blob);
+    }
+    lastAudio = { text: story.text, bedtime: story.bedtime, blob: blob };
+
+    if (stopRequested) { setSpeakingState(false); return; }
+    setSpeakingState(true);
+    playBlob(blob);
+  } catch (e) {
+    if (stopRequested) { setSpeakingState(false); return; }
+    /* Azure 掛掉不能讓孩子聽不到故事：退回 Web Speech，
+       並把語音挑選 UI 顯示出來（那些選項只在這條路徑上有意義） */
+    usingFallback = true;
+    renderVoicePicker();
+    setSpeakingState(true);
+    speakWithWebSpeech(story.text);
+  }
+}
+
+/* ---------- Web Speech（備援）---------- */
+function speakWithWebSpeech(text) {
+  if (!SPEECH_OK) { setSpeakingState(false); return; }
 
   const segments = splitIntoSegments(text);
   if (!segments.length) return;
@@ -1063,8 +1210,12 @@ function speak(text) {
   next();
 }
 
+/* 兩條播放路徑都要停：Azure 的 <audio> 和 Web Speech 的佇列 */
 function stopSpeaking() {
   stopRequested = true;
+  if (audioEl) {
+    try { audioEl.pause(); audioEl.currentTime = 0; } catch (e) {}
+  }
   if (SPEECH_OK) speechSynthesis.cancel();
   setSpeakingState(false);
 }
@@ -1086,11 +1237,16 @@ function loadVoices() {
 
 function renderVoicePicker() {
   const sel = el("voice-picker");
-  /* 只有一個聲音可選時，下拉選單沒有意義，收起來 */
-  if (voices.length < 2) {
+  const help = el("voice-help");
+
+  /* 語音挑選與 iOS 下載引導只在「退回 Web Speech」時才有意義。
+     Azure 正常時聲音是固定的曉臻，這些選項只會讓家長困惑，收起來。 */
+  if (!usingFallback || voices.length < 2) {
     sel.classList.add("hidden");
+    help.classList.toggle("hidden", !usingFallback);
     return;
   }
+  help.classList.remove("hidden");
   sel.classList.remove("hidden");
   sel.innerHTML = voices
     .map((v) => `<option value="${v.name}">🎙 ${v.name}（${v.lang}）</option>`)
@@ -1116,6 +1272,7 @@ el("fav-close").addEventListener("click", closeFavPanel);
 el("fav-list").addEventListener("click", (e) => {
   const del = e.target.closest("[data-del]");
   if (del) {
+    audioCacheDelete(del.dataset.del);   /* 連同快取的音檔一起清掉，不留孤兒資料 */
     favs = favs.filter((f) => f.id !== del.dataset.del);
     saveFavs();
     renderFavList();
@@ -1149,26 +1306,27 @@ el("generate-btn").addEventListener("click", generate);
 el("again-btn").addEventListener("click", generate);
 el("retry-btn").addEventListener("click", generate);
 
-/* 朗讀：iOS 規定必須由使用者手勢觸發，所以只能綁在按鈕上，不可自動播放 */
+/* 朗讀：iOS 規定必須由使用者手勢觸發，所以只能綁在按鈕上，不可自動播放。
+   unlockAudio() 一定要在這裡「同步」執行——它是整個 iOS 播放能否成功的關鍵，
+   放到 speak() 裡的 await 後面就失效了。 */
 el("speak-btn").addEventListener("click", () => {
-  if (speaking) stopSpeaking();
-  else speak(el("story-text").textContent);
+  if (speaking) { stopSpeaking(); return; }
+  unlockAudio();
+  speak(currentStory);
 });
 
 el("voice-picker").addEventListener("change", (e) => {
   voiceName = e.target.value;
-  /* 換聲音時如果正在唸，用新聲音從頭開始 */
-  if (speaking) speak(el("story-text").textContent);
+  /* 換聲音時如果正在唸，用新聲音從頭開始（這條只在 Web Speech 備援時會用到） */
+  if (speaking) speakWithWebSpeech(el("story-text").textContent);
 });
 
+/* 先把語音清單準備好，Azure 失敗退回 Web Speech 時才不用臨時等 */
 if (SPEECH_OK) {
   loadVoices();
   speechSynthesis.addEventListener("voiceschanged", loadVoices);
-} else {
-  /* 瀏覽器不支援朗讀時，不要留一顆按了沒反應的按鈕 */
-  el("speak-btn").classList.add("hidden");
-  el("voice-help").classList.add("hidden");
 }
+renderVoicePicker();   /* 預設把語音挑選與 iOS 引導收起來 */
 
 /* 真的離開頁面時才停，避免關掉頁面後聲音還在背景繼續唸。
    刻意不綁 visibilitychange：睡前情境下家長很可能把手機放下、螢幕自動鎖上，
