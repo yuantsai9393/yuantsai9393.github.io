@@ -243,51 +243,40 @@ h1 { font-size: 26px; font-weight: 700; margin: 8px 0 4px; }
 .speak.on { background: #b0446b; }
 .speak:focus-visible { outline: 3px solid var(--night-bottom); outline-offset: 2px; }
 
-/* ---------- 家長設定：語音 A/B（暫時功能）---------- */
+/* ---------- 語音 A/B（暫時功能）----------
+   刻意做得低調：不是重要功能，就一行小小的分段切換，不用大區塊。 */
 .voice-settings {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 0 0 18px;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.18);
-  background: rgba(255,255,255,.06);
-  overflow: hidden;
 }
-.voice-settings summary {
-  list-style: none;
-  cursor: pointer;
-  min-height: 44px;
-  display: flex;
-  align-items: center;
-  padding: 10px 14px;
-  font-size: 14px;
-  color: rgba(255,255,255,.85);
+.voice-settings-label { font-size: 12px; opacity: .55; flex-shrink: 0; }
+/* 分段控制：兩個選項擠在一顆膠囊裡，選中的那格才亮起來 */
+.azure-voice-list {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.08);
 }
-.voice-settings summary::-webkit-details-marker { display: none; }
-.voice-settings-body { padding: 0 14px 14px; }
-.voice-settings-hint { font-size: 13px; opacity: .7; margin: 0 0 10px; line-height: 1.6; }
-.azure-voice-list { display: flex; flex-direction: column; gap: 8px; }
 .azure-voice {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 44px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 2px solid transparent;
-  background: rgba(255,255,255,.1);
-  color: #fff;
+  min-height: 30px;
+  padding: 5px 14px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255,255,255,.6);
   font-family: inherit;
-  font-size: 14px;
-  text-align: left;
+  font-size: 13px;
   cursor: pointer;
+  transition: background .2s, color .2s;
 }
 .azure-voice[aria-pressed="true"] {
-  border-color: var(--star);
-  background: rgba(255,214,107,.22);
+  background: rgba(255,214,107,.9);
+  color: #4a2c00;
+  font-weight: 600;
 }
-.azure-voice:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
-.azure-voice-name { font-weight: 600; }
-.azure-voice-note { opacity: .65; font-size: 12px; }
-.azure-voice-check { margin-left: auto; color: var(--star); }
+.azure-voice:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
 
 /* ---------- 收藏 ---------- */
 /* 靠左的小膠囊：把右上角完整讓給睡前模式開關，兩者不搶位置 */
@@ -575,14 +564,11 @@ h1 { font-size: 26px; font-weight: 700; margin: 8px 0 4px; }
 
   <button id="fav-entry" class="fav-entry" type="button">⭐ 我的收藏</button>
 
-  <!-- 家長設定：語音 A/B 測試（暫時功能，收合不佔主畫面，孩子不需要看到） -->
-  <details id="voice-settings" class="voice-settings hidden">
-    <summary>🔧 換一個說故事的聲音</summary>
-    <div class="voice-settings-body">
-      <p class="voice-settings-hint">聽聽看哪個聲音最順耳，選好之後每個故事都會用這個聲音。</p>
-      <div id="azure-voice-list" class="azure-voice-list"></div>
-    </div>
-  </details>
+  <!-- 語音 A/B（暫時功能）：低調的一行，選好聲音就收起來，不搶主畫面 -->
+  <div id="voice-settings" class="voice-settings hidden">
+    <span class="voice-settings-label">聲音</span>
+    <div id="azure-voice-list" class="azure-voice-list" role="group" aria-label="說故事的聲音"></div>
+  </div>
 
   <div id="groups"></div>
 
@@ -1415,14 +1401,15 @@ renderVoicePicker();   /* 預設把語音挑選與 iOS 引導收起來 */
    清單向 Workers 取，是唯一真實來源；定案後刪掉 /voices 與這段即可 */
 function renderAzureVoices() {
   const box = el("azure-voice-list");
-  if (!azureVoices.length) return;
+  /* 只有一個語音時分段切換沒有意義，整條藏起來 */
+  if (azureVoices.length < 2) {
+    el("voice-settings").classList.add("hidden");
+    return;
+  }
   box.innerHTML = azureVoices.map((v) => `
     <button class="azure-voice" type="button" data-voice="${v.id}"
-            aria-pressed="${v.id === azureVoice ? "true" : "false"}">
-      <span class="azure-voice-name">${v.label}</span>
-      <span class="azure-voice-note">${v.note}</span>
-      <span class="azure-voice-check">${v.id === azureVoice ? "✓" : ""}</span>
-    </button>
+            aria-pressed="${v.id === azureVoice ? "true" : "false"}"
+            title="${v.note}">${v.label}</button>
   `).join("");
   el("voice-settings").classList.remove("hidden");
 }
