@@ -243,6 +243,52 @@ h1 { font-size: 26px; font-weight: 700; margin: 8px 0 4px; }
 .speak.on { background: #b0446b; }
 .speak:focus-visible { outline: 3px solid var(--night-bottom); outline-offset: 2px; }
 
+/* ---------- 家長設定：語音 A/B（暫時功能）---------- */
+.voice-settings {
+  margin: 0 0 18px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.18);
+  background: rgba(255,255,255,.06);
+  overflow: hidden;
+}
+.voice-settings summary {
+  list-style: none;
+  cursor: pointer;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  padding: 10px 14px;
+  font-size: 14px;
+  color: rgba(255,255,255,.85);
+}
+.voice-settings summary::-webkit-details-marker { display: none; }
+.voice-settings-body { padding: 0 14px 14px; }
+.voice-settings-hint { font-size: 13px; opacity: .7; margin: 0 0 10px; line-height: 1.6; }
+.azure-voice-list { display: flex; flex-direction: column; gap: 8px; }
+.azure-voice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 2px solid transparent;
+  background: rgba(255,255,255,.1);
+  color: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+.azure-voice[aria-pressed="true"] {
+  border-color: var(--star);
+  background: rgba(255,214,107,.22);
+}
+.azure-voice:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+.azure-voice-name { font-weight: 600; }
+.azure-voice-note { opacity: .65; font-size: 12px; }
+.azure-voice-check { margin-left: auto; color: var(--star); }
+
 /* ---------- 收藏 ---------- */
 /* 靠左的小膠囊：把右上角完整讓給睡前模式開關，兩者不搶位置 */
 .fav-entry {
@@ -529,6 +575,15 @@ h1 { font-size: 26px; font-weight: 700; margin: 8px 0 4px; }
 
   <button id="fav-entry" class="fav-entry" type="button">⭐ 我的收藏</button>
 
+  <!-- 家長設定：語音 A/B 測試（暫時功能，收合不佔主畫面，孩子不需要看到） -->
+  <details id="voice-settings" class="voice-settings hidden">
+    <summary>🔧 換一個說故事的聲音</summary>
+    <div class="voice-settings-body">
+      <p class="voice-settings-hint">聽聽看哪個聲音最順耳，選好之後每個故事都會用這個聲音。</p>
+      <div id="azure-voice-list" class="azure-voice-list"></div>
+    </div>
+  </details>
+
   <div id="groups"></div>
 
   <button id="surprise-btn" class="surprise" type="button">🎲 隨機驚喜（幫我全部選好）</button>
@@ -617,6 +672,14 @@ const GROUP_HINT = { 角色: "（可以選兩個一起玩）" };
 let pick = { 角色: [], 場景: [], 心情: [] };
 let bedtime = false;
 let loading = false;
+
+/* Azure 語音 A/B 測試（暫時功能）。清單向 Workers 的 /voices 取，
+   前端不自己維護一份，避免和後端白名單不同步。
+   VOICE_KEY 記住家長選的語音；定案後移除選擇器只需刪這段與 UI 元件。 */
+const VOICE_KEY = "storybook_voice";
+let azureVoices = [];
+let azureVoice = "";
+try { azureVoice = localStorage.getItem(VOICE_KEY) || ""; } catch (e) {}
 
 const el = (id) => document.getElementById(id);
 
@@ -914,7 +977,7 @@ function toggleFav() {
   if (!currentStory) return;
 
   if (isFav(currentStory)) {
-    audioCacheDelete(currentStory.id);   /* 取消收藏就不用再留著音檔 */
+    audioCacheDeleteStory(currentStory.id);   /* 取消收藏，該故事所有語音變體的音檔一起清 */
     favs = favs.filter((f) => f.id !== currentStory.id);
     currentStory.id = null;
   } else {
@@ -931,9 +994,9 @@ function toggleFav() {
     currentStory = item;
 
     /* 剛剛唸過的話，音檔一起存起來：之後重聽不用再呼叫 /tts。
-       這是省 Azure 額度的關鍵設計 */
+       key 要綁語音與睡前模式，收藏才會存到「剛剛聽到的那個聲音」 */
     if (lastAudio && lastAudio.text === item.text && lastAudio.bedtime === item.bedtime) {
-      audioCachePut(item.id, lastAudio.blob);
+      audioCachePut(audioKey(item.id, lastAudio.voice, item.bedtime), lastAudio.blob);
     }
   }
   saveFavs();
@@ -1002,31 +1065,46 @@ function openAudioDb() {
   });
 }
 
-async function audioCacheGet(id) {
-  if (!id || !("indexedDB" in window)) return null;
+/* 快取 key 必須綁「故事 + 語音 + 睡前模式」三者：
+   - 語音：A/B 測試換語音後，同一則故事的音檔是不同聲音，不能共用
+   - 睡前：同一則故事開/關睡前模式的語氣不同，音檔也不同
+   否則換了設定卻播到舊音檔。 */
+function audioKey(id, voice, bedtimeFlag) {
+  return id + "__" + (voice || "default") + "__" + (bedtimeFlag ? "b" : "n");
+}
+
+async function audioCacheGet(key) {
+  if (!key || !("indexedDB" in window)) return null;
   try {
     const db = await openAudioDb();
     return await new Promise((resolve) => {
-      const req = db.transaction(AUDIO_STORE, "readonly").objectStore(AUDIO_STORE).get(id);
+      const req = db.transaction(AUDIO_STORE, "readonly").objectStore(AUDIO_STORE).get(key);
       req.onsuccess = () => resolve(req.result || null);
       req.onerror = () => resolve(null);
     });
   } catch (e) { return null; }
 }
 
-async function audioCachePut(id, blob) {
-  if (!id || !("indexedDB" in window)) return;
+async function audioCachePut(key, blob) {
+  if (!key || !("indexedDB" in window)) return;
   try {
     const db = await openAudioDb();
-    db.transaction(AUDIO_STORE, "readwrite").objectStore(AUDIO_STORE).put(blob, id);
+    db.transaction(AUDIO_STORE, "readwrite").objectStore(AUDIO_STORE).put(blob, key);
   } catch (e) {}
 }
 
-async function audioCacheDelete(id) {
+/* 刪一則收藏時，把它所有語音 × 睡前變體的音檔都清掉，不留孤兒 */
+async function audioCacheDeleteStory(id) {
   if (!id || !("indexedDB" in window)) return;
   try {
     const db = await openAudioDb();
-    db.transaction(AUDIO_STORE, "readwrite").objectStore(AUDIO_STORE).delete(id);
+    const store = db.transaction(AUDIO_STORE, "readwrite").objectStore(AUDIO_STORE);
+    const req = store.getAllKeys();
+    req.onsuccess = () => {
+      (req.result || []).forEach((k) => {
+        if (typeof k === "string" && k.indexOf(id + "__") === 0) store.delete(k);
+      });
+    };
   } catch (e) {}
 }
 
@@ -1132,18 +1210,19 @@ function playBlob(blob) {
   }
 }
 
-async function fetchTts(text, bedtime) {
+async function fetchTts(text, bedtime, voice) {
   const res = await fetch(API_BASE + "/tts", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text: text, bedtime: bedtime }),
+    body: JSON.stringify({ text: text, bedtime: bedtime, voice: voice }),
   });
   if (!res.ok) throw new Error("tts_failed");
   return await res.blob();
 }
 
-/* 同一則故事重聽不要重抓（省 TTS 額度）。收藏過的另外進 IndexedDB。 */
-let lastAudio = null;   /* { text, bedtime, blob } */
+/* 同一則故事重聽不要重抓（省 TTS 額度）。收藏過的另外進 IndexedDB。
+   比對要連 voice 一起：換語音後同一則故事是不同聲音，不能沿用記憶體快取 */
+let lastAudio = null;   /* { text, bedtime, voice, blob } */
 
 async function speak(story) {
   if (!story || !story.text) return;
@@ -1151,18 +1230,22 @@ async function speak(story) {
   stopRequested = false;
   setSpeakingState(true, "準備聲音中⋯");
 
+  const voice = azureVoice;   /* 這次朗讀用的語音，固定住避免中途被改 */
+
   try {
     let blob = null;
 
-    if (lastAudio && lastAudio.text === story.text && lastAudio.bedtime === story.bedtime) {
+    if (lastAudio && lastAudio.text === story.text &&
+        lastAudio.bedtime === story.bedtime && lastAudio.voice === voice) {
       blob = lastAudio.blob;
     }
-    if (!blob) blob = await audioCacheGet(story.id);
+    const key = story.id ? audioKey(story.id, voice, story.bedtime) : null;
+    if (!blob && key) blob = await audioCacheGet(key);
     if (!blob) {
-      blob = await fetchTts(story.text, story.bedtime);
-      if (story.id) audioCachePut(story.id, blob);
+      blob = await fetchTts(story.text, story.bedtime, voice);
+      if (key) audioCachePut(key, blob);
     }
-    lastAudio = { text: story.text, bedtime: story.bedtime, blob: blob };
+    lastAudio = { text: story.text, bedtime: story.bedtime, voice: voice, blob: blob };
 
     if (stopRequested) { setSpeakingState(false); return; }
     setSpeakingState(true);
@@ -1272,7 +1355,7 @@ el("fav-close").addEventListener("click", closeFavPanel);
 el("fav-list").addEventListener("click", (e) => {
   const del = e.target.closest("[data-del]");
   if (del) {
-    audioCacheDelete(del.dataset.del);   /* 連同快取的音檔一起清掉，不留孤兒資料 */
+    audioCacheDeleteStory(del.dataset.del);   /* 連同所有語音變體的音檔一起清掉，不留孤兒 */
     favs = favs.filter((f) => f.id !== del.dataset.del);
     saveFavs();
     renderFavList();
@@ -1327,6 +1410,48 @@ if (SPEECH_OK) {
   speechSynthesis.addEventListener("voiceschanged", loadVoices);
 }
 renderVoicePicker();   /* 預設把語音挑選與 iOS 引導收起來 */
+
+/* ---------- Azure 語音 A/B 選擇（家長端，暫時功能）----------
+   清單向 Workers 取，是唯一真實來源；定案後刪掉 /voices 與這段即可 */
+function renderAzureVoices() {
+  const box = el("azure-voice-list");
+  if (!azureVoices.length) return;
+  box.innerHTML = azureVoices.map((v) => `
+    <button class="azure-voice" type="button" data-voice="${v.id}"
+            aria-pressed="${v.id === azureVoice ? "true" : "false"}">
+      <span class="azure-voice-name">${v.label}</span>
+      <span class="azure-voice-note">${v.note}</span>
+      <span class="azure-voice-check">${v.id === azureVoice ? "✓" : ""}</span>
+    </button>
+  `).join("");
+  el("voice-settings").classList.remove("hidden");
+}
+
+async function loadAzureVoices() {
+  try {
+    const res = await fetch(API_BASE + "/voices");
+    if (!res.ok) return;
+    const data = await res.json();
+    azureVoices = data.voices || [];
+    /* 沒選過、或存的值已不在清單裡（清單改版），退回後端提供的預設 */
+    if (!azureVoices.some((v) => v.id === azureVoice)) {
+      azureVoice = data.default || (azureVoices[0] && azureVoices[0].id) || "";
+    }
+    renderAzureVoices();
+  } catch (e) { /* 拿不到清單就不顯示選擇器，朗讀仍用預設語音 */ }
+}
+
+el("azure-voice-list").addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-voice]");
+  if (!btn) return;
+  azureVoice = btn.dataset.voice;
+  try { localStorage.setItem(VOICE_KEY, azureVoice); } catch (err) {}
+  renderAzureVoices();
+  /* 換語音時如果正在唸，用新語音從頭開始（會重新抓，因為快取 key 綁語音） */
+  if (speaking && !usingFallback && currentStory) speak(currentStory);
+});
+
+loadAzureVoices();
 
 /* 真的離開頁面時才停，避免關掉頁面後聲音還在背景繼續唸。
    刻意不綁 visibilitychange：睡前情境下家長很可能把手機放下、螢幕自動鎖上，
